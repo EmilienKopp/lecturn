@@ -1,0 +1,56 @@
+import type { SlideLayout } from '@/types/generated';
+
+export type LayoutDefinition = {
+    label: string;
+    slots: string[];
+    /** Tailwind classes for the slide-level grid/flex container. */
+    containerClass: string;
+    /** Optional per-slot classes (keyed by slot name). */
+    slotClass?: Record<string, string>;
+};
+
+export const layoutDefinitions: Record<SlideLayout, LayoutDefinition> = {
+    full: {
+        label: 'Full',
+        slots: ['main'],
+        containerClass: 'grid h-full grid-cols-1',
+    },
+    center: {
+        label: 'Center',
+        slots: ['main'],
+        containerClass: 'flex h-full items-center justify-center',
+    },
+    'top-main': {
+        label: 'Top + Main',
+        slots: ['top', 'main'],
+        containerClass: 'grid h-full grid-rows-[auto_1fr] gap-4',
+    },
+    'top-main-footer': {
+        label: 'Top + Main + Footer',
+        slots: ['top', 'main', 'footer'],
+        containerClass: 'grid h-full grid-rows-[auto_1fr_auto] gap-4',
+    },
+    'left-right': {
+        label: 'Two Columns',
+        slots: ['left', 'right'],
+        containerClass: 'grid h-full grid-cols-2 gap-6',
+    },
+    'left-wide-right': {
+        label: 'Narrow Left + Wide Right',
+        slots: ['left', 'right'],
+        containerClass: 'grid h-full grid-cols-[1fr_2fr] gap-6',
+    },
+    'grid-2x2': {
+        label: 'Grid 2×2',
+        slots: ['a', 'b', 'c', 'd'],
+        containerClass: 'grid h-full grid-cols-2 grid-rows-2 gap-4',
+    },
+    'grid-2x3': {
+        label: 'Grid 2×3',
+        slots: ['a', 'b', 'c', 'd', 'e', 'f'],
+        containerClass: 'grid h-full grid-cols-3 grid-rows-2 gap-4',
+    },
+};
+
+/** Layouts exposed in the editor UI for the walking skeleton. */
+export const availableLayouts: SlideLayout[] = ['full', 'center', 'left-right'];
