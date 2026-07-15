@@ -178,6 +178,41 @@ test('an unknown layout is rejected by request validation', function () {
     $response->assertSessionHasErrors('content.slides.0.layout');
 });
 
+test('the present page renders with the presentation content', function () {
+    $user = User::factory()->create();
+    $presentation = PresentationModel::factory()->withSlides(2)->create([
+        'team_id' => $user->currentTeam->id,
+    ]);
+
+    $response = $this
+        ->actingAs($user)
+        ->get(route('presentations.present', [
+            'current_team' => $user->currentTeam->slug,
+            'presentation' => $presentation->id,
+        ]));
+
+    $response->assertOk();
+    $response->assertInertia(fn (Assert $page) => $page
+        ->component('presentations/Present')
+        ->where('presentation.id', $presentation->id)
+        ->has('presentation.content.slides', 2),
+    );
+});
+
+test('the present page of another team presentation is not reachable', function () {
+    $user = User::factory()->create();
+    $otherTeamPresentation = PresentationModel::factory()->create();
+
+    $response = $this
+        ->actingAs($user)
+        ->get(route('presentations.present', [
+            'current_team' => $user->currentTeam->slug,
+            'presentation' => $otherTeamPresentation->id,
+        ]));
+
+    $response->assertNotFound();
+});
+
 test('presentations of other teams cannot be reached through the current team', function () {
     $user = User::factory()->create();
     $otherTeamPresentation = PresentationModel::factory()->create();

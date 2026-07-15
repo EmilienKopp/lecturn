@@ -5,6 +5,7 @@ use App\Http\Controllers\Presentations\CreatePresentationController;
 use App\Http\Controllers\Presentations\DeletePresentationController;
 use App\Http\Controllers\Presentations\EditPresentationController;
 use App\Http\Controllers\Presentations\ListPresentationsController;
+use App\Http\Controllers\Presentations\PresentPresentationController;
 use App\Http\Controllers\Presentations\UpdatePresentationController;
 use App\Http\Controllers\Teams\TeamInvitationController;
 use App\Http\Middleware\EnsureTeamMembership;
@@ -22,6 +23,7 @@ Route::prefix('{current_team}')
         Route::get('presentations', ListPresentationsController::class)->name('presentations.index');
         Route::post('presentations', CreatePresentationController::class)->name('presentations.store');
         Route::get('presentations/{presentation}', EditPresentationController::class)->name('presentations.edit');
+        Route::get('presentations/{presentation}/present', PresentPresentationController::class)->name('presentations.present');
         Route::put('presentations/{presentation}', UpdatePresentationController::class)->name('presentations.update');
         Route::delete('presentations/{presentation}', DeletePresentationController::class)->name('presentations.destroy');
     });

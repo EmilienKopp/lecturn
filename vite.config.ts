@@ -4,6 +4,7 @@ import { svelte } from '@sveltejs/vite-plugin-svelte';
 import tailwindcss from '@tailwindcss/vite';
 import laravel from 'laravel-vite-plugin';
 import { bunny } from 'laravel-vite-plugin/fonts';
+import { fileURLToPath } from 'node:url';
 import { defineConfig } from 'vite';
 
 const isSvelteCheck = process.argv.some((argument) => argument.includes('svelte-check'));
@@ -13,6 +14,17 @@ if (isSvelteCheck) {
 }
 
 export default defineConfig({
+    resolve: {
+        alias: {
+            // @animotion/core expects SvelteKit's $app/environment.
+            '$app/environment': fileURLToPath(
+                new URL(
+                    './resources/js/lib/shims/app-environment.ts',
+                    import.meta.url,
+                ),
+            ),
+        },
+    },
     plugins: [
         laravel({
             input: ['resources/css/app.css', 'resources/js/app.ts'],

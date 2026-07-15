@@ -1,45 +1,66 @@
 # Lecturn — Requirements Document
 
-> A WYSIWYG slide editor that compiles to [Animotion](https://animotion.dev) Svelte presentations.
+> A web-native presentation platform. Author slides in the browser, present from your account, and ship to your own website as a self-contained embeddable component.
 
 ---
 
 ## 1. Overview
 
-Lecturn is a browser-based slide authoring tool. Users compose slides visually through a constrained layout system, and Lecturn exports a valid Animotion-compatible `.svelte` file (or set of files) as output. The editor stores its state as JSON; the Svelte output is a write-only compile target.
+Lecturn is a browser-based slide authoring and hosting platform. Users compose presentations visually through a constrained layout system, present them directly from lecturn.io, and optionally export or embed them anywhere on the web — including custom websites, Webflow, Framer, or plain HTML pages.
+
+The Animotion/Svelte rendering engine powers the output but is an invisible implementation detail. Users never write code.
+
+The core value proposition is **ownership and portability**: your presentations live where you want them, look like the web, and don't require a Google or Microsoft account to exist.
 
 ---
 
 ## 2. Goals
 
-- Author Animotion presentations without writing Svelte by hand
-- Keep the editor scope tight: content, layout, and transition sequencing only
-- Produce clean, readable Svelte output that a developer can take over if needed
-- Persist state as portable JSON (importable/exportable)
+- Author presentations in a good-enough visual editor (not competing with Google Slides on features — competing on output quality and ownership)
+- MINIMALISM is a design principle: no unnecessary UI, no unnecessary features, no unnecessary complexity
+- The slides you design are also meant to be MINIMALISTIC (no giant walls of text or images) -> that's part of the value proposition: A tool that does minimalism well, not a tool that does everything poorly
+- Host and present directly from lecturn.io with no export required
+- Export as a self-contained embeddable web component (script tag, works anywhere)
+- Store all state as portable JSON (import/export at any time)
+- Ship compiled output via CDN — no iframe, no external dependency at embed time
 
 ---
 
 ## 3. Non-Goals
 
-- Not a general-purpose presentation tool (not a Keynote/PowerPoint replacement)
+- Not a Keynote/PowerPoint feature-for-feature replacement
 - No freeform drag-and-drop positioning (v1)
-- No real-time collaborative editing
-- No built-in Animotion runtime / preview (v1 — see §8)
+- No real-time collaborative editing (v1)
+- No video/audio embedding (v1)
+- Not targeting non-technical users — primary audience is developers, technical educators, and dev-adjacent creators
+- No "power user" feature additions that compromise minimalism as a design principle
 
 ---
 
-## 4. Editor UI
+## 4. Product Tiers
 
-### 4.1 Canvas
+| Tier       | Description                                                                     |
+| ---------- | ------------------------------------------------------------------------------- |
+| **Free**   | Author and present from lecturn.io. Presentations live at `lecturn.io/p/{slug}` |
+| **Pro**    | Embed script export, custom slug, presentations hosted on your own domain       |
+| **Studio** | Multiple presentations, client delivery, white-label embed (agency use)         |
+
+The free tier is a fully functional presenting tool — the upgrade reason is portability, which is philosophically aligned with why the target user chose Lecturn over Google Slides in the first place.
+
+---
+
+## 5. Editor UI
+
+### 5.1 Canvas
 
 - Fixed 16:9 aspect ratio canvas, scaled to fit the viewport
-- Canvas represents one slide at a time
-- Slide list / navigator panel on the left (thumbnails or ordered list)
-- Sidebar on the right for block-level controls (font, size, color, etc.)
+- Canvas shows one slide at a time
+- Slide navigator panel on the left (ordered list or thumbnails)
+- Sidebar on the right for block-level style controls (font, size, color, etc.)
 
-### 4.2 Layout System
+### 5.2 Layout System
 
-Each slide picks one layout. Layouts define named slots that the editor renders as outlined drop zones. Supported layouts:
+Each slide picks one layout. Layouts define named slots rendered as outlined zones in the editor. No absolute positioning — layouts own all sizing and placement.
 
 | ID                | Description                                      |
 | ----------------- | ------------------------------------------------ |
@@ -52,34 +73,49 @@ Each slide picks one layout. Layouts define named slots that the editor renders 
 | `grid-2x2`        | Four equal cells                                 |
 | `grid-2x3`        | Six equal cells                                  |
 
-Layouts are implemented as CSS Grid/Flex — no absolute positioning.
+Layouts are implemented as CSS Grid/Flex.
 
-### 4.3 Blocks
+### 5.3 Blocks
 
-Blocks are placed into layout slots. Each slot can contain one or more blocks stacked vertically. Supported block types:
+Blocks are placed into layout slots. Each slot can contain one or more blocks stacked vertically.
 
 | Type    | Implementation                                                             |
 | ------- | -------------------------------------------------------------------------- |
 | `text`  | `contenteditable="plaintext-only"` with toolbar for font/size/weight/color |
 | `code`  | CodeMirror 6 with language selector and theme                              |
-| `image` | File upload → stored as base64 or `/static/` asset reference               |
+| `image` | File upload → stored as base64 or CDN asset reference                      |
 
-### 4.4 Transition Sequencing
+### 5.4 Transition Sequencing
 
-- Any block can be assigned a transition (right-click → "Add transition")
+- Any block can be assigned a transition step (right-click → "Add transition")
 - Transitions are ordered by a numeric index (1, 2, 3…) per slide
 - Blocks with a transition get a numbered badge overlay in the editor
 - Order can be reassigned via the right-click context menu
-- Blocks without a transition render directly inside `<Slide>` (always visible)
-- Blocks with a transition render wrapped in `<Transition>` in order
+- Blocks without a transition are always visible on the slide
+- Blocks with a transition are revealed in order during presentation
 
 ---
 
-## 5. JSON Data Model
+## 6. Presenting
+
+- Presentations are hosted at `lecturn.io/p/{slug}` on the free tier
+- Fullscreen presentation mode with keyboard navigation (arrow keys, spacebar)
+- Transition steps advance on keypress, matching Animotion's default behaviour
+- Shareable link — no account required to view
+
+---
+
+## 7. JSON Data Model
+
+The canonical source of truth. All editor state is serialised to and from this format.
 
 ```json
 {
     "version": "1.0",
+    "meta": {
+        "title": "My Presentation",
+        "slug": "my-presentation"
+    },
     "slides": [
         {
             "id": "slide-1",
@@ -123,11 +159,33 @@ Blocks are placed into layout slots. Each slot can contain one or more blocks st
 
 ---
 
-## 6. Svelte Output (Codegen)
+## 8. Compilation Pipeline
 
-Lecturn compiles the JSON into an Animotion-compatible `.svelte` file.
+Lecturn's backend compiles JSON into a Svelte component, then builds it into a self-contained web component bundle using the Svelte compiler's custom element output.
 
-### 6.1 Output Shape
+```
+Lecturn JSON
+  → Svelte codegen (server-side)
+  → Svelte compiler (customElement: true)
+  → Self-contained JS bundle
+  → CDN-hosted at lecturn.io/embed/{id}.js
+```
+
+### 8.1 Embed Output
+
+```html
+<!-- Drop anywhere: Webflow, Framer, plain HTML, WordPress, etc. -->
+<script src="https://lecturn.io/embed/abc123.js"></script>
+<lecturn-presentation id="abc123" />
+```
+
+- No iframe — a real web component
+- Fully self-contained: styles, fonts, and logic bundled into the JS file
+- Works in any HTML context with no build step required on the consumer's side
+
+### 8.2 Svelte Intermediate (Animotion)
+
+The intermediate Svelte representation uses Animotion components:
 
 ```svelte
 <script>
@@ -153,47 +211,53 @@ Lecturn compiles the JSON into an Animotion-compatible `.svelte` file.
 </Presentation>
 ```
 
-### 6.2 Rules
+### 8.3 Codegen Rules
 
 - Blocks with `transition: null` render directly inside their slot div
 - Blocks with a transition are sorted by `transition.order` and wrapped in `<Transition>`
-- Layout slot divs use class names matching the layout ID (`slot-left`, `slot-right`, etc.)
-- A companion `layouts.css` (or Tailwind classes) ships with the output to style the layout grids
-- Output is a single `Presentation.svelte` file by default; one file per slide is a future option
+- Layout slot divs use class names matching the slot name (`slot-left`, `slot-right`, etc.)
+- Scoped styles for layout grids are compiled into the bundle
 
 ---
 
-## 7. Persistence
+## 9. Persistence & Storage
 
-| Concern       | Approach                                          |
-| ------------- | ------------------------------------------------- |
-| Working state | `localStorage` during editing                     |
-| Save / export | Download as `.json`                               |
-| Compile       | "Export Svelte" button → downloads `.svelte` file |
-| Import        | Load `.json` to resume editing                    |
+| Concern         | Approach                                          |
+| --------------- | ------------------------------------------------- |
+| Working state   | `localStorage` during editing                     |
+| Cloud save      | Server-side per user account (authenticated)      |
+| JSON export     | Download `.json` at any time                      |
+| JSON import     | Resume editing from any `.json` file              |
+| Compiled bundle | Generated server-side on publish, served from CDN |
 
 ---
 
-## 8. Out of Scope for v1 (Future Considerations)
+## 10. Tech Stack
 
-- Live Animotion preview (iframe embed of the compiled output)
-- Freeform absolute-position layout ("canvas" mode)
+| Concern              | Choice                                              |
+| -------------------- | --------------------------------------------------- |
+| Editor frontend      | Svelte 5                                            |
+| Rich text input      | `contenteditable="plaintext-only"`                  |
+| Code editor          | CodeMirror 6                                        |
+| Styling              | Tailwind CSS                                        |
+| Codegen              | Plain JS template strings                           |
+| Compiler             | Svelte compiler (`customElement: true`)             |
+| Presentation runtime | Animotion (`@animotion/core`)                       |
+| Build tool           | Vite                                                |
+| Backend              | TBD (Laravel is a natural fit given author's stack) |
+| Asset storage        | TBD (S3-compatible)                                 |
+| Bundle CDN           | TBD (Cloudflare R2 / CloudFront)                    |
+
+---
+
+## 11. Future Considerations (Post-v1)
+
+- CLI: `lecturn build presentation.json` for local compile without the editor
+- Freeform "canvas" layout mode with absolute positioning
 - Custom layout builder
-- Multiple themes / design tokens
-- Per-slide transition animations (currently Animotion handles this at runtime)
-- Cloud save / multi-user
-- CLI (`lecturn build presentation.json`) to compile without opening the editor
-
----
-
-## 9. Tech Stack
-
-| Concern          | Choice                             |
-| ---------------- | ---------------------------------- |
-| Editor framework | Svelte 5                           |
-| Rich text input  | `contenteditable="plaintext-only"` |
-| Code editor      | CodeMirror 6                       |
-| Styling          | Tailwind CSS                       |
-| Codegen          | Plain JS template strings          |
-| Build tool       | Vite                               |
-| Output target    | Animotion (`@animotion/core`)      |
+- Theme system / design tokens
+- Per-slide background images or videos
+- Password-protected presentations
+- Analytics (view counts, slide drop-off)
+- Exportable PDF / static HTML snapshot
+- **[v2] Svelte Flow transition editor**: a node graph view where slides and blocks are nodes, and edges define transition sequence and animation type. Replaces/supplements the right-click order assignment with a visual wiring interface. The current JSON transition model (order, future animation) is designed to support this without schema changes.

@@ -29,3 +29,6 @@ declare module '@inertiajs/core' {
         };
     }
 }
+
+// CSS-only export of @animotion/core; no type declarations shipped.
+declare module '@animotion/core/theme';

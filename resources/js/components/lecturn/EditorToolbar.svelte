@@ -1,11 +1,12 @@
 <script lang="ts">
     import { router, page } from '@inertiajs/svelte';
     import Download from 'lucide-svelte/icons/download';
+    import Play from 'lucide-svelte/icons/play';
     import Save from 'lucide-svelte/icons/save';
     import { Button } from '@/components/ui/button';
     import { Input } from '@/components/ui/input';
     import type { EditorState } from '@/lib/lecturn/editor-state.svelte';
-    import { update } from '@/routes/presentations';
+    import { present, update } from '@/routes/presentations';
 
     let {
         editor,
@@ -20,6 +21,15 @@
     } = $props();
 
     let saving = $state(false);
+
+    const presentUrl = $derived(
+        page.props.currentTeam
+            ? present({
+                  current_team: page.props.currentTeam.slug,
+                  presentation: presentationId,
+              }).url
+            : null,
+    );
 
     const save = () => {
         const currentTeam = page.props.currentTeam;
@@ -58,6 +68,22 @@
     />
 
     <div class="ml-auto flex items-center gap-2">
+        {#if presentUrl}
+            <Button variant="outline" size="sm" asChild>
+                {#snippet children(props)}
+                    <a
+                        {...props}
+                        href={presentUrl}
+                        target="_blank"
+                        rel="noopener"
+                        data-test="editor-present-link"
+                    >
+                        <Play class="h-4 w-4" /> Present
+                    </a>
+                {/snippet}
+            </Button>
+        {/if}
+
         <Button
             variant="outline"
             size="sm"
