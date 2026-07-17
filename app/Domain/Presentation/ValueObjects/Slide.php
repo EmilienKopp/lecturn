@@ -10,24 +10,29 @@ readonly class Slide
 {
     /**
      * @param  array<string, list<Block>>  $slots
+     * @param  array<string, mixed>|null  $config
      */
     public function __construct(
         public string $id,
         public SlideLayout $layout,
         public ?string $background,
         public array $slots,
+        public ?array $config = null,
     ) {
         if ($this->id === '') {
             throw new InvalidPresentationContent('Slide id cannot be empty.');
         }
 
-        $allowedSlots = $this->layout->slots();
+        // custom-grid and rich-text use a single 'main' slot with free-form block placement.
+        if ($this->layout !== SlideLayout::CustomGrid && $this->layout !== SlideLayout::RichText) {
+            $allowedSlots = $this->layout->slots();
 
-        foreach (array_keys($this->slots) as $slotName) {
-            if (! in_array($slotName, $allowedSlots, true)) {
-                throw new InvalidPresentationContent(
-                    "Slot \"{$slotName}\" is not defined by layout \"{$this->layout->value}\"."
-                );
+            foreach (array_keys($this->slots) as $slotName) {
+                if (! in_array($slotName, $allowedSlots, true)) {
+                    throw new InvalidPresentationContent(
+                        "Slot \"{$slotName}\" is not defined by layout \"{$this->layout->value}\"."
+                    );
+                }
             }
         }
     }
@@ -58,13 +63,14 @@ readonly class Slide
             layout: $layout,
             background: isset($data['background']) ? (string) $data['background'] : null,
             slots: $slots,
+            config: is_array($data['config'] ?? null) ? $data['config'] : null,
         );
     }
 
     /** @return array<string, mixed> */
     public function toArray(): array
     {
-        return [
+        $data = [
             'id' => $this->id,
             'layout' => $this->layout->value,
             'background' => $this->background,
@@ -76,5 +82,11 @@ readonly class Slide
                 $this->slots,
             ),
         ];
+
+        if ($this->config !== null) {
+            $data['config'] = $this->config;
+        }
+
+        return $data;
     }
 }

@@ -14,6 +14,8 @@ enum SlideLayout: string
     case LeftWideRight = 'left-wide-right';
     case Grid2x2 = 'grid-2x2';
     case Grid2x3 = 'grid-2x3';
+    case CustomGrid = 'custom-grid';
+    case RichText = 'rich-text';
 
     /**
      * @return list<string>
@@ -21,7 +23,7 @@ enum SlideLayout: string
     public function slots(): array
     {
         return match ($this) {
-            self::Full, self::Center => ['main'],
+            self::Full, self::Center, self::CustomGrid, self::RichText => ['main'],
             self::TopMain => ['top', 'main'],
             self::TopMainFooter => ['top', 'main', 'footer'],
             self::LeftRight, self::LeftWideRight => ['left', 'right'],

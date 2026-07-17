@@ -8,7 +8,7 @@ use App\Domain\Presentation\Exceptions\InvalidPresentationContent;
 
 readonly class Block
 {
-    public const array TYPES = ['text', 'code', 'image'];
+    public const array TYPES = ['text', 'code', 'image', 'box', 'richtext'];
 
     public function __construct(
         public string $id,

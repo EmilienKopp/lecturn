@@ -1,6 +1,10 @@
 <script lang="ts">
+    import Code2 from 'lucide-svelte/icons/code-2';
     import Plus from 'lucide-svelte/icons/plus';
+    import Square from 'lucide-svelte/icons/square';
     import TextBlockView from '@/components/lecturn/TextBlockView.svelte';
+    import CodeBlockView from '@/components/lecturn/CodeBlockView.svelte';
+    import BoxBlockView from '@/components/lecturn/BoxBlockView.svelte';
     import type { EditorState } from '@/lib/lecturn/editor-state.svelte';
 
     let {
@@ -18,15 +22,40 @@
     {#each blocks as block (block.id)}
         {#if block.type === 'text'}
             <TextBlockView {editor} {block} />
+        {:else if block.type === 'code'}
+            <CodeBlockView {editor} {block} />
+        {:else if block.type === 'box'}
+            <BoxBlockView {editor} {block} />
         {/if}
     {/each}
 
-    <button
-        type="button"
-        class="mt-auto flex items-center justify-center gap-1 rounded py-1 text-xs text-muted-foreground opacity-40 transition-opacity hover:bg-accent hover:opacity-100"
-        onclick={() => editor.addTextBlock(slotName)}
-        data-test="add-text-block-button"
-    >
-        <Plus class="h-3 w-3" /> Text
-    </button>
+    <div class="mt-auto flex items-center justify-center gap-1">
+        <button
+            type="button"
+            class="flex items-center gap-1 rounded px-2 py-1 text-xs text-muted-foreground opacity-40 transition-opacity hover:bg-accent hover:opacity-100"
+            onclick={() => editor.addTextBlock(slotName)}
+            data-test="add-text-block-button"
+            title="Add text block"
+        >
+            <Plus class="h-3 w-3" /> Text
+        </button>
+        <button
+            type="button"
+            class="flex items-center gap-1 rounded px-2 py-1 text-xs text-muted-foreground opacity-40 transition-opacity hover:bg-accent hover:opacity-100"
+            onclick={() => editor.addCodeBlock(slotName)}
+            data-test="add-code-block-button"
+            title="Add code block"
+        >
+            <Code2 class="h-3 w-3" /> Code
+        </button>
+        <button
+            type="button"
+            class="flex items-center gap-1 rounded px-2 py-1 text-xs text-muted-foreground opacity-40 transition-opacity hover:bg-accent hover:opacity-100"
+            onclick={() => editor.addBoxBlock(slotName)}
+            data-test="add-box-block-button"
+            title="Add bordered box"
+        >
+            <Square class="h-3 w-3" /> Box
+        </button>
+    </div>
 </div>

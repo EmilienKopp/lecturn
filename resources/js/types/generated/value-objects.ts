@@ -12,6 +12,10 @@ export type BlockStyle = {
 readonly fontSize: string | null,
 readonly fontWeight: string | null,
 readonly color: string | null,
+readonly borderColor: string | null,
+readonly backgroundColor: string | null,
+readonly gridColumn: string | null,
+readonly gridRow: string | null,
 };
 export type CursorPaginatedDataCollection<TKey, TValue> = CursorPaginator<TKey, TValue>;
 export type CursorPaginator<TKey, TValue> = {
@@ -63,8 +67,9 @@ readonly id: string,
 readonly layout: SlideLayout,
 readonly background: string | null,
 readonly slots: Record<string, Block[]>,
+readonly config: Record<string, any> | null,
 };
-export type SlideLayout = 'full' | 'center' | 'top-main' | 'top-main-footer' | 'left-right' | 'left-wide-right' | 'grid-2x2' | 'grid-2x3';
+export type SlideLayout = 'full' | 'center' | 'top-main' | 'top-main-footer' | 'left-right' | 'left-wide-right' | 'grid-2x2' | 'grid-2x3' | 'custom-grid' | 'rich-text';
 export type Transition = {
 readonly order: number,
 };

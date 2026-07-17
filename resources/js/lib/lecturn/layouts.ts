@@ -50,7 +50,25 @@ export const layoutDefinitions: Record<SlideLayout, LayoutDefinition> = {
         slots: ['a', 'b', 'c', 'd', 'e', 'f'],
         containerClass: 'grid h-full grid-cols-3 grid-rows-2 gap-4',
     },
+    'custom-grid': {
+        label: 'Free Grid',
+        slots: ['main'],
+        containerClass: '',
+    },
+    'rich-text': {
+        label: 'Rich Text',
+        slots: ['main'],
+        containerClass: 'h-full overflow-y-auto',
+    },
 };
 
-/** Layouts exposed in the editor UI for the walking skeleton. */
-export const availableLayouts: SlideLayout[] = ['full', 'center', 'left-right'];
+export const availableLayouts: SlideLayout[] = [
+    'full',
+    'center',
+    'top-main',
+    'left-right',
+    'left-wide-right',
+    'grid-2x2',
+    'custom-grid',
+    'rich-text',
+];
