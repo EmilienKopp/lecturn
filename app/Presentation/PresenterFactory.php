@@ -9,11 +9,11 @@ use App\Presentation\Presenters\NodePresenter;
 
 class PresenterFactory
 {
-    public function make(ExportFormat $format): Presenter
+    public function make(ExportFormat $format, ?string $customElementTag = null): Presenter
     {
         return match ($format) {
             ExportFormat::SvelteSource,
-            ExportFormat::WebComponent => new NodePresenter($format),
+            ExportFormat::WebComponent => new NodePresenter($format, $customElementTag),
         };
     }
 }

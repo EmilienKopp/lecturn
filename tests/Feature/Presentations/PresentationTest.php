@@ -71,7 +71,9 @@ test('the editor page renders with the presentation content', function () {
         ->component('presentations/Editor')
         ->where('presentation.id', $presentation->id)
         ->where('presentation.name', $presentation->name)
-        ->has('presentation.content.slides', 2),
+        ->has('presentation.content.slides', 2)
+        ->where('embed.url', route('presentations.embed', ['presentation' => $presentation->embed_token]))
+        ->where('embed.tag', 'lecturn-deck-'.strtolower(substr($presentation->embed_token, 0, 8))),
     );
 });
 

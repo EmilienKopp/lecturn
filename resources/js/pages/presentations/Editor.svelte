@@ -18,6 +18,7 @@
 
     let {
         presentation,
+        embed,
     }: {
         presentation: {
             id: number;
@@ -25,7 +26,15 @@
             content: PresentationContent;
             updated_at: string | null;
         };
+        embed: {
+            url: string;
+            tag: string;
+        };
     } = $props();
+
+    // The element must be block-level with a real height — Reveal.js sizes
+    // itself to 100% of its container.
+    const embedSnippet = `<script src="${embed.url}"><\/script>\n<${embed.tag} style="display: block; width: 100%; aspect-ratio: 16 / 9;"></${embed.tag}>`;
 
     const editor = new EditorState(presentation.content);
     let name = $state(presentation.name);
@@ -72,6 +81,7 @@
         bind:name
         onExport={exportSvelte}
         onExportWebComponent={exportWebComponent}
+        {embedSnippet}
     />
 
     <div class="flex min-h-0 flex-1">

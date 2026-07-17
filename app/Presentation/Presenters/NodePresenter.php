@@ -19,7 +19,10 @@ use Symfony\Component\Process\Process;
  */
 class NodePresenter implements Presenter
 {
-    public function __construct(private readonly ExportFormat $format) {}
+    public function __construct(
+        private readonly ExportFormat $format,
+        private readonly ?string $customElementTag = null,
+    ) {}
 
     public function present(PresentationContent $content, string $name): PresenterOutput
     {
@@ -27,6 +30,7 @@ class NodePresenter implements Presenter
         $process->setInput(json_encode([
             'format' => $this->format->value,
             'content' => $content->toArray(),
+            'tag' => $this->customElementTag,
         ], JSON_THROW_ON_ERROR));
         $process->setTimeout(120);
         $process->run();

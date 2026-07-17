@@ -7,6 +7,7 @@ namespace App\Application\Actions\Presentations;
 use App\Application\Commands\UpdatePresentationCommand;
 use App\Domain\Presentation\Contracts\PresentationRepository;
 use App\Domain\Presentation\Entities\PresentationEntity;
+use App\Domain\Presentation\Events\PresentationContentReplaced;
 
 class UpdatePresentation
 {
@@ -26,6 +27,12 @@ class UpdatePresentation
             $presentation->replaceContent($command->content);
         }
 
-        return $this->presentations->save($presentation);
+        $saved = $this->presentations->save($presentation);
+
+        if ($command->content !== null) {
+            PresentationContentReplaced::dispatch($saved->id);
+        }
+
+        return $saved;
     }
 }

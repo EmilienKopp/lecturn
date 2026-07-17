@@ -4,6 +4,7 @@ use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\Presentations\CreatePresentationController;
 use App\Http\Controllers\Presentations\DeletePresentationController;
 use App\Http\Controllers\Presentations\EditPresentationController;
+use App\Http\Controllers\Presentations\EmbedPresentationController;
 use App\Http\Controllers\Presentations\ExportPresentationController;
 use App\Http\Controllers\Presentations\ListPresentationsController;
 use App\Http\Controllers\Presentations\PresentPresentationController;
@@ -14,6 +15,10 @@ use Illuminate\Support\Facades\Route;
 use Laravel\WorkOS\Http\Middleware\ValidateSessionWithWorkOS;
 
 Route::inertia('/', 'Welcome')->name('home');
+
+Route::get('embed/presentations/{presentation:embed_token}.js', EmbedPresentationController::class)
+    ->middleware('throttle:60,1')
+    ->name('presentations.embed');
 
 Route::prefix('{current_team}')
     ->middleware(['auth', ValidateSessionWithWorkOS::class, EnsureTeamMembership::class])

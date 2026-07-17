@@ -10,6 +10,7 @@ use Splitstack\Rome\Models\ReadOnlyModel;
  * @property int $team_id
  * @property string $name
  * @property array<string, mixed> $content
+ * @property string $embed_token
  * @property Carbon|null $created_at
  * @property Carbon|null $updated_at
  */

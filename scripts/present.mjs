@@ -29,7 +29,7 @@ async function readStdin() {
     return data;
 }
 
-async function buildWebComponent(source) {
+async function buildWebComponent(source, tag) {
     const { build } = await import('vite');
     const { svelte } = await import('@sveltejs/vite-plugin-svelte');
 
@@ -40,9 +40,12 @@ async function buildWebComponent(source) {
     const entry = path.join(tmpDir, 'Presentation.svelte');
 
     try {
+        // shadow: 'none' is required — Animotion's Presentation initializes
+        // Reveal.js against document.querySelector('.reveal'), which cannot
+        // see inside a shadow root (nor can the CSS injected into <head>).
         fs.writeFileSync(
             entry,
-            `<svelte:options customElement="lecturn-presentation" />\n${source}`,
+            `<svelte:options customElement={{ tag: ${JSON.stringify(tag)}, shadow: 'none' }} />\n${source}`,
         );
 
         const result = await build({
@@ -91,7 +94,7 @@ async function buildWebComponent(source) {
 }
 
 try {
-    const { format, content } = JSON.parse(await readStdin());
+    const { format, content, tag } = JSON.parse(await readStdin());
 
     // Node 22.18+ runs TypeScript directly via type stripping.
     const { generatePresentationSvelte } =
@@ -103,7 +106,9 @@ try {
             process.stdout.write(source);
             break;
         case 'web-component':
-            process.stdout.write(await buildWebComponent(source));
+            process.stdout.write(
+                await buildWebComponent(source, tag ?? 'lecturn-presentation'),
+            );
             break;
         default:
             throw new Error(`Unknown export format: ${format}`);

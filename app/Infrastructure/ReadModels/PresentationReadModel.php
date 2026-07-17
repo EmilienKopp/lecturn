@@ -27,6 +27,19 @@ class PresentationReadModel
     }
 
     /**
+     * @return array{embed_token: string, content: array<string, mixed>}
+     */
+    public function findForEmbed(int $presentationId): array
+    {
+        $presentation = PresentationsView::query()->findOrFail($presentationId);
+
+        return [
+            'embed_token' => $presentation->embed_token,
+            'content' => $presentation->content,
+        ];
+    }
+
+    /**
      * @return array{id: int, name: string, content: array<string, mixed>, updated_at: string|null}
      */
     public function findForEditor(int $presentationId): array

@@ -1,8 +1,10 @@
 <script lang="ts">
     import { router, page } from '@inertiajs/svelte';
+    import CodeXml from 'lucide-svelte/icons/code-xml';
     import Download from 'lucide-svelte/icons/download';
     import Play from 'lucide-svelte/icons/play';
     import Save from 'lucide-svelte/icons/save';
+    import { toast } from 'svelte-sonner';
     import { Button } from '@/components/ui/button';
     import { Input } from '@/components/ui/input';
     import type { EditorState } from '@/lib/lecturn/editor-state.svelte';
@@ -14,13 +16,20 @@
         name = $bindable(),
         onExport,
         onExportWebComponent,
+        embedSnippet,
     }: {
         editor: EditorState;
         presentationId: number;
         name: string;
         onExport: () => void;
         onExportWebComponent: () => Promise<void>;
+        embedSnippet: string;
     } = $props();
+
+    const copyEmbedSnippet = async () => {
+        await navigator.clipboard.writeText(embedSnippet);
+        toast.success('Embed code copied to clipboard.');
+    };
 
     let saving = $state(false);
     let exportingWebComponent = $state(false);
@@ -115,6 +124,15 @@
         >
             <Download class="h-4 w-4" />
             {exportingWebComponent ? 'Exporting…' : 'Export Web Component'}
+        </Button>
+
+        <Button
+            variant="outline"
+            size="sm"
+            onclick={copyEmbedSnippet}
+            data-test="editor-copy-embed-button"
+        >
+            <CodeXml class="h-4 w-4" /> Copy Embed
         </Button>
 
         <Button

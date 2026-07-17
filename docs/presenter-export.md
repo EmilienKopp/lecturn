@@ -62,6 +62,33 @@ The whole web-component build takes **~1 second** (rolldown-powered Vite), so it
 
 The export route requires `node` on the server and installed `node_modules` (including devDependencies — Vite and the Svelte plugin are dev deps). If production installs with `--omit=dev`, either move `vite`, `@sveltejs/vite-plugin-svelte`, `svelte`, and `@animotion/core` to `dependencies` or keep dev deps installed on the web server.
 
+## CDN-Style Embed Endpoint
+
+`GET /embed/presentations/{embed_token}.js` (`presentations.embed`) serves the web-component build directly for `<script src>` embedding on external sites:
+
+```html
+<script src="https://lecturn.example/embed/presentations/{token}.js"></script>
+<lecturn-deck-{first-8-of-token}
+    style="display: block; width: 100%; aspect-ratio: 16 / 9"
+></lecturn-deck-{first-8-of-token}>
+```
+
+Two embed-specific compile details (both handled by the "Copy Embed" snippet):
+
+- The element compiles with **`shadow: 'none'`** (light DOM). Animotion's `Presentation` initializes Reveal.js via `document.querySelector('.reveal')`, which cannot see into a shadow root — and the reveal/theme CSS injected into `<head>` couldn't style it either. Light DOM makes both work; the tradeoff is no style encapsulation from the host page.
+- The element **must be block-level with a real height** (Reveal sizes to 100% of its container); custom elements default to `display: inline` with zero height.
+
+**Access model** — the route is public (external pages can't send session cookies) and keyed by `embed_token`, a random 32-char string on the presentations table (generated in `PresentationModel::booted()` on create; backfilled by migration). The URL is a capability: private until shared, revocable by rotating the token. Throttled at 60 req/min.
+
+**Caching & regeneration** (`app/Presentation/EmbedCache.php`):
+
+- **Lazy generation**: first request materializes `storage/app/embeds/{token}.js` (write-to-temp + rename, so concurrent readers never see a partial file); later requests serve from disk with `Cache-Control: public, max-age=300`.
+- **Save refresh**: `UpdatePresentation` dispatches `PresentationContentReplaced` (only when content changed, not on rename); the `RefreshPresentationEmbed` listener regenerates the file **only if it already exists** — decks nobody embeds never pay the build cost. The listener runs synchronously (~1s added to save); make it `ShouldQueue` once a queue worker exists.
+
+**Per-presentation custom element tag** — embeds use `lecturn-deck-{lowercased first 8 chars of token}` instead of the shared `lecturn-presentation` tag, so two decks on one page don't collide on `customElements.define()`. The tag is passed to `scripts/present.mjs` via the optional `tag` field (plumbed through `NodePresenter` / `PresenterFactory::make($format, $customElementTag)`).
+
+**View note** — `embed_token` was added to `presentations_view` (the `.sql` file), and the add-column migration is deliberately timestamped *before* the view-creation migration so fresh databases (tests) replay in a valid order.
+
 ## Adding More Export Formats Later (e.g. PDF)
 
 1. Add `Pdf = 'pdf'` to `ExportFormat` with its mime/extension
@@ -74,4 +101,5 @@ Nothing else changes — the port is open.
 ## Verification
 
 - `php artisan test --compact tests/Feature/Presentations/ExportPresentationTest.php` — both formats end-to-end (real Node subprocess), invalid format 422, cross-team 404
+- `php artisan test --compact tests/Feature/Presentations/EmbedPresentationTest.php` — guest access, lazy generation, cached serving, save-refresh (only when file exists), unknown token 404, token generation
 - Manual: editor toolbar → "Export Web Component" → downloaded `.js` defines `<lecturn-presentation>` when loaded via `<script src>`
