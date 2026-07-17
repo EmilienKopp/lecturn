@@ -4,6 +4,7 @@ use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\Presentations\CreatePresentationController;
 use App\Http\Controllers\Presentations\DeletePresentationController;
 use App\Http\Controllers\Presentations\EditPresentationController;
+use App\Http\Controllers\Presentations\ExportPresentationController;
 use App\Http\Controllers\Presentations\ListPresentationsController;
 use App\Http\Controllers\Presentations\PresentPresentationController;
 use App\Http\Controllers\Presentations\UpdatePresentationController;
@@ -24,6 +25,7 @@ Route::prefix('{current_team}')
         Route::post('presentations', CreatePresentationController::class)->name('presentations.store');
         Route::get('presentations/{presentation}', EditPresentationController::class)->name('presentations.edit');
         Route::get('presentations/{presentation}/present', PresentPresentationController::class)->name('presentations.present');
+        Route::get('presentations/{presentation}/export', ExportPresentationController::class)->name('presentations.export');
         Route::put('presentations/{presentation}', UpdatePresentationController::class)->name('presentations.update');
         Route::delete('presentations/{presentation}', DeletePresentationController::class)->name('presentations.destroy');
     });

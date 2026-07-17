@@ -1,6 +1,7 @@
 import type { Block, PresentationContent, Slide } from '@/types/generated';
 
-import { layoutDefinitions } from '@/lib/lecturn/layouts';
+// Relative + extensioned so Node can run this file natively (scripts/present.mjs).
+import { layoutDefinitions } from './layouts.ts';
 
 interface EditorJsBlock {
     type: string;

@@ -2,141 +2,76 @@
 
 ## Context
 
-The slide editor currently exports presentations via a purely frontend pipeline: `codegen.ts → downloadFile()`. This document describes the backend Presenter port that adds:
+The slide editor originally exported presentations only via a frontend pipeline: `codegen.ts → downloadFile()`. The backend Presenter port adds:
 
-1. **"Export Web Component"** — PHP → Node.js subprocess → `svelte/compiler` (`customElement: true`) → esbuild bundle → self-contained `.js` for embedding in any site/Webflow
+1. **"Export Web Component"** — PHP → Node.js subprocess → Vite build (`@sveltejs/vite-plugin-svelte` with `customElement: true`) → self-contained IIFE `.js` registering `<lecturn-presentation>`, embeddable in any site/Webflow
 2. Foundation for a future **"Export PDF"** (PHP → Node → Playwright)
 3. A clean `Presenter` interface so all export types share the same port
 
-The existing frontend "Export Svelte" is unchanged.
+The frontend "Export Svelte" button is unchanged and stays client-side.
 
----
+## Single Source of Truth
+
+**The Svelte generation logic lives only in `resources/js/lib/lecturn/codegen.ts`.** There is no PHP port. Both consumers use the same module:
+
+- The editor imports it directly for the client-side "Export Svelte" download.
+- `scripts/present.mjs` imports it natively — Node ≥ 22.18 runs TypeScript via type stripping. To make this possible, `codegen.ts` imports `./layouts.ts` relatively (with extension) instead of via the `@/` alias, and `allowImportingTsExtensions` is enabled in `tsconfig.json`.
+
+**No new npm dependencies.** The web-component bundle is produced by the already-installed Vite (programmatic `build()` API), which also compiles the `.svelte` components inside `@animotion/core` — something raw esbuild could not do without extra plugins.
 
 ## Architecture Fit
 
-Export is a **read operation** (no mutation), so:
-- No Action class — controller reads directly from `PresentationReadModel`
-- Uses `PresentationContent::fromArray($data['content'])` to reconstruct the VO from the ReadModel array
-- `PresentationPolicy` already exists — authorize via route-bound `PresentationModel`
+Export is a **read operation** (no mutation), so per ARCHITECTURE.md:
 
-The `app/Presentation/` namespace (separate from `app/Domain/Presentation/`) is the home for the Presenter interface and its implementations.
+- No Action class — the controller reads via `PresentationReadModel::findForEditor()`
+- `PresentationContent::fromArray($data['content'])` reconstructs the domain VO
+- Authorization via route-bound `PresentationModel` + existing `PresentationPolicy`
 
----
+The `app/Presentation/` namespace (distinct from `app/Domain/Presentation/`) hosts the Presenter port and implementations. It may use Laravel freely (it is infrastructure-adjacent: processes, paths).
 
-## New Files
+## Components
 
 | File | Purpose |
-|------|---------|
+| --- | --- |
+| `app/Presentation/Contracts/Presenter.php` | Port: `present(PresentationContent $content, string $name): PresenterOutput` |
 | `app/Presentation/PresenterOutput.php` | Readonly DTO: `content`, `mimeType`, `filename` |
-| `app/Presentation/ExportFormat.php` | Backed enum: `SvelteSource = 'svelte'`, `WebComponent = 'web-component'` |
-| `app/Presentation/Contracts/Presenter.php` | **Update** stub → `present(PresentationContent, string $name): PresenterOutput` |
-| `app/Presentation/Presenters/SvelteSourcePresenter.php` | PHP port of `codegen.ts`'s `generatePresentationSvelte()` |
-| `app/Presentation/Presenters/WebComponentPresenter.php` | Spawns `node scripts/present.mjs` via `Symfony\Component\Process` |
-| `app/Presentation/PresenterFactory.php` | `make(ExportFormat): Presenter` — match expression, no interface (YAGNI) |
-| `app/Http/Requests/Presentations/ExportPresentationRequest.php` | Validates `format` via `Rule::enum(ExportFormat::class)` |
-| `app/Http/Controllers/Presentations/ExportPresentationController.php` | Thin controller: ReadModel → Factory → `response()->streamDownload()` |
-| `scripts/present.mjs` | Node subprocess: stdin JSON → Svelte compile + esbuild bundle → stdout JS |
+| `app/Presentation/ExportFormat.php` | Backed enum (`svelte`, `web-component`) with `mimeType()` / `extension()` |
+| `app/Presentation/Presenters/NodePresenter.php` | Single implementation for both formats — pipes `{format, content}` JSON into `scripts/present.mjs` via `Symfony\Component\Process` |
+| `app/Presentation/PresenterFactory.php` | `make(ExportFormat): Presenter` match expression |
+| `app/Http/Requests/Presentations/ExportPresentationRequest.php` | Validates `format` (`Rule::enum`), exposes `exportFormat()` |
+| `app/Http/Controllers/Presentations/ExportPresentationController.php` | Thin: authorize → ReadModel → Factory → `streamDownload()` |
+| `scripts/present.mjs` | Node subprocess: stdin JSON → codegen.ts → (optionally) Vite custom-element build → stdout |
+| Route | `GET /{current_team}/presentations/{presentation}/export?format=…` (`presentations.export`) |
 
-## Modified Files
+## The Node Script
 
-| File | Change |
-|------|--------|
-| `routes/web.php` | Add `GET presentations/{presentation}/export` → `ExportPresentationController` |
-| `resources/js/pages/presentations/Editor.svelte` | Add `exportWebComponent()` using `fetch` + blob download |
-| `resources/js/components/lecturn/EditorToolbar.svelte` | Add "Export Web Component" button |
+`scripts/present.mjs` reads `{ format, content }` from stdin and writes the artifact to stdout (errors → stderr, non-zero exit):
 
----
+- **`svelte`**: runs `generatePresentationSvelte(content)` and prints the source.
+- **`web-component`**: prepends `<svelte:options customElement="lecturn-presentation" />` to the generated source, writes it to a temp dir under `node_modules/.cache/`, and runs a programmatic Vite lib build (IIFE, `write: false`, `cssCodeSplit: false`). Extracted CSS is inlined via a small runtime `<style>` injector so the output is a single file. The `$app/environment` shim alias from `vite.config.ts` is replicated for Animotion's Transition component.
 
-## Key Implementation Details
+The whole web-component build takes **~1 second** (rolldown-powered Vite), so it runs synchronously in the request — no queue needed. Output is ~10 MB because Animotion's `Code` component pulls in the full Shiki highlighter; trimming that is a future optimization.
 
-### `Presenter` interface update
-```php
-interface Presenter {
-    public function present(PresentationContent $content, string $name): PresenterOutput;
-}
-```
-Both implementations need `$name` for the output filename.
+## Frontend
 
-### `SvelteSourcePresenter`
-- PHP port of `codegen.ts` — same rendering logic
-- Use `SlideLayout::slots()` (already on the domain VO) for slot names
-- Private `slugify(string): string` method mirroring the TS utility
-- Returns `PresenterOutput('text/plain', '{slug}.svelte')`
+- `EditorToolbar.svelte`: "Export Web Component" button with a pending state (`Exporting…`).
+- `Editor.svelte`: `exportWebComponent()` fetches the export route (Wayfinder's `exportMethod` — Wayfinder renames the reserved word `export`) with `?format=web-component`, then triggers a browser download via `downloadBlob()` (new helper in `download.ts`; `downloadFile()` now delegates to it).
+- Raw `fetch` is acceptable here per ARCHITECTURE.md: the endpoint returns non-page data.
 
-### `WebComponentPresenter`
-```php
-$process = new Process(['node', base_path('scripts/present.mjs')]);
-$process->setInput(json_encode(['format' => 'web-component', 'content' => $content->toArray(), 'name' => $name]));
-$process->setTimeout(30)->run();
-if (!$process->isSuccessful()) throw new \RuntimeException($process->getErrorOutput());
-return new PresenterOutput($process->getOutput(), 'application/javascript', "{$slug}.js");
-```
+## Deployment Note
 
-### `scripts/present.mjs`
-1. Read stdin → parse JSON
-2. Generate Svelte source (duplicate of `codegen.ts` logic in plain JS — do NOT import TS directly)
-3. `compile(source, { customElement: true, name: 'LecturnPresentation', generate: 'client' })`
-4. `esbuild.build({ bundle: true })` to inline `@animotion/core`
-5. Write bundle to stdout
+The export route requires `node` on the server and installed `node_modules` (including devDependencies — Vite and the Svelte plugin are dev deps). If production installs with `--omit=dev`, either move `vite`, `@sveltejs/vite-plugin-svelte`, `svelte`, and `@animotion/core` to `dependencies` or keep dev deps installed on the web server.
 
-`svelte/compiler` is CommonJS; bridge it in `.mjs` with:
-```js
-import { createRequire } from 'module';
-const { compile } = createRequire(import.meta.url)('svelte/compiler');
-```
+## Adding More Export Formats Later (e.g. PDF)
 
-### Controller
-```php
-public function __invoke(ExportPresentationRequest $request, Team $current_team, PresentationModel $presentation): StreamedResponse
-{
-    Gate::authorize('view', $presentation);
-    $data = $this->presentations->findForEditor($presentation->id);
-    $content = PresentationContent::fromArray($data['content']);
-    $output = $this->factory->make(ExportFormat::from($request->validated('format')))->present($content, $data['name']);
-    return response()->streamDownload(fn() => print($output->content), $output->filename, ['Content-Type' => $output->mimeType]);
-}
-```
+1. Add `Pdf = 'pdf'` to `ExportFormat` with its mime/extension
+2. Implement a `PdfPresenter` (likely: reuse the Node script to produce HTML, then Playwright → PDF)
+3. Add the case to `PresenterFactory::make()`
+4. Add a toolbar button
 
-### Frontend download
-`fetch` (acceptable per ARCHITECTURE.md — returns non-page data) + `URL.createObjectURL(blob)`. Add a `downloadBlob(filename, blob)` helper to `download.ts`.
+Nothing else changes — the port is open.
 
----
+## Verification
 
-## Dependency Change Required
-
-**`esbuild` is not installed.** The `scripts/present.mjs` bundling step requires it.
-
-Recommended: `npm install --save-dev esbuild` — pure binary, no transitive deps, ~10 MB.
-
----
-
-## Implementation Order
-
-Steps 1–9 are pure PHP and testable before touching Node.
-
-1. `PresenterOutput.php`
-2. `ExportFormat.php`
-3. `Presenter.php` (update interface)
-4. `SvelteSourcePresenter.php` + unit test
-5. `WebComponentPresenter.php` (PHP side)
-6. `PresenterFactory.php`
-7. `ExportPresentationRequest.php`
-8. `ExportPresentationController.php`
-9. `routes/web.php` — add route
-10. *(Approval gate)* `npm install --save-dev esbuild`
-11. `scripts/present.mjs`
-12. `php artisan wayfinder:generate`
-13. Frontend: `Editor.svelte` + `EditorToolbar.svelte`
-14. Tests: `ExportPresentationTest.php`
-
----
-
-## Adding More Export Formats Later
-
-To add `PdfPresenter`:
-1. Add `Pdf = 'pdf'` to `ExportFormat`
-2. Implement `PdfPresenter` (PHP → Node → Playwright)
-3. Add a case to `PresenterFactory::make()`
-4. Add a button to `EditorToolbar`
-
-No other files change. The port is open.
+- `php artisan test --compact tests/Feature/Presentations/ExportPresentationTest.php` — both formats end-to-end (real Node subprocess), invalid format 422, cross-team 404
+- Manual: editor toolbar → "Export Web Component" → downloaded `.js` defines `<lecturn-presentation>` when loaded via `<script src>`

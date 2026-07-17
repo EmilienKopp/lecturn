@@ -1,9 +1,4 @@
-export function downloadFile(
-    filename: string,
-    contents: string,
-    mime = 'text/plain',
-): void {
-    const blob = new Blob([contents], { type: mime });
+export function downloadBlob(filename: string, blob: Blob): void {
     const url = URL.createObjectURL(blob);
 
     const anchor = document.createElement('a');
@@ -12,6 +7,14 @@ export function downloadFile(
     anchor.click();
 
     URL.revokeObjectURL(url);
+}
+
+export function downloadFile(
+    filename: string,
+    contents: string,
+    mime = 'text/plain',
+): void {
+    downloadBlob(filename, new Blob([contents], { type: mime }));
 }
 
 export function slugify(value: string): string {

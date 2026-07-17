@@ -13,14 +13,27 @@
         presentationId,
         name = $bindable(),
         onExport,
+        onExportWebComponent,
     }: {
         editor: EditorState;
         presentationId: number;
         name: string;
         onExport: () => void;
+        onExportWebComponent: () => Promise<void>;
     } = $props();
 
     let saving = $state(false);
+    let exportingWebComponent = $state(false);
+
+    const exportWebComponent = async () => {
+        exportingWebComponent = true;
+
+        try {
+            await onExportWebComponent();
+        } finally {
+            exportingWebComponent = false;
+        }
+    };
 
     const presentUrl = $derived(
         page.props.currentTeam
@@ -94,12 +107,24 @@
         </Button>
 
         <Button
+            variant="outline"
+            size="sm"
+            disabled={exportingWebComponent}
+            onclick={exportWebComponent}
+            data-test="editor-export-web-component-button"
+        >
+            <Download class="h-4 w-4" />
+            {exportingWebComponent ? 'Exporting…' : 'Export Web Component'}
+        </Button>
+
+        <Button
             size="sm"
             disabled={!editor.dirty || saving}
             onclick={save}
             data-test="editor-save-button"
         >
-            <Save class="h-4 w-4" /> {saving ? 'Saving…' : 'Save'}
+            <Save class="h-4 w-4" />
+            {saving ? 'Saving…' : 'Save'}
         </Button>
     </div>
 </div>

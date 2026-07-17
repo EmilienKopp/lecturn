@@ -5,9 +5,16 @@
     import SlideCanvas from '@/components/lecturn/SlideCanvas.svelte';
     import SlideNavigator from '@/components/lecturn/SlideNavigator.svelte';
     import { generatePresentationSvelte } from '@/lib/lecturn/codegen';
-    import { downloadFile, slugify } from '@/lib/lecturn/download';
+    import {
+        downloadBlob,
+        downloadFile,
+        slugify,
+    } from '@/lib/lecturn/download';
     import { EditorState } from '@/lib/lecturn/editor-state.svelte';
+    import { exportMethod } from '@/routes/presentations';
     import type { PresentationContent } from '@/types/generated';
+    import { page } from '@inertiajs/svelte';
+    import { toast } from 'svelte-sonner';
 
     let {
         presentation,
@@ -29,6 +36,31 @@
             generatePresentationSvelte(editor.content),
         );
     };
+
+    const exportWebComponent = async () => {
+        const currentTeam = page.props.currentTeam;
+
+        if (!currentTeam) {
+            return;
+        }
+
+        const url = exportMethod(
+            {
+                current_team: currentTeam.slug,
+                presentation: presentation.id,
+            },
+            { query: { format: 'web-component' } },
+        ).url;
+
+        const response = await fetch(url);
+
+        if (!response.ok) {
+            toast.error('Web component export failed.');
+            return;
+        }
+
+        downloadBlob(`${slugify(name)}.js`, await response.blob());
+    };
 </script>
 
 <AppHead title={name} />
@@ -39,6 +71,7 @@
         presentationId={presentation.id}
         bind:name
         onExport={exportSvelte}
+        onExportWebComponent={exportWebComponent}
     />
 
     <div class="flex min-h-0 flex-1">
