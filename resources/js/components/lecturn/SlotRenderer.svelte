@@ -16,7 +16,7 @@
 </script>
 
 <div
-    class="flex h-full flex-col gap-2 rounded border border-dashed border-muted-foreground/30 p-2"
+    class="flex h-full flex-col gap-2 rounded border border-dashed border-current/25 p-2"
     data-test="slot-{slotName}"
 >
     {#each blocks as block (block.id)}
@@ -32,7 +32,7 @@
     <div class="mt-auto flex items-center justify-center gap-1">
         <button
             type="button"
-            class="flex items-center gap-1 rounded px-2 py-1 text-xs text-muted-foreground opacity-40 transition-opacity hover:bg-accent hover:opacity-100"
+            class="flex items-center gap-1 rounded px-2 py-1 text-xs opacity-40 transition-opacity hover:bg-current/10 hover:opacity-100"
             onclick={() => editor.addTextBlock(slotName)}
             data-test="add-text-block-button"
             title="Add text block"
@@ -41,7 +41,7 @@
         </button>
         <button
             type="button"
-            class="flex items-center gap-1 rounded px-2 py-1 text-xs text-muted-foreground opacity-40 transition-opacity hover:bg-accent hover:opacity-100"
+            class="flex items-center gap-1 rounded px-2 py-1 text-xs opacity-40 transition-opacity hover:bg-current/10 hover:opacity-100"
             onclick={() => editor.addCodeBlock(slotName)}
             data-test="add-code-block-button"
             title="Add code block"
@@ -50,7 +50,7 @@
         </button>
         <button
             type="button"
-            class="flex items-center gap-1 rounded px-2 py-1 text-xs text-muted-foreground opacity-40 transition-opacity hover:bg-accent hover:opacity-100"
+            class="flex items-center gap-1 rounded px-2 py-1 text-xs opacity-40 transition-opacity hover:bg-current/10 hover:opacity-100"
             onclick={() => editor.addBoxBlock(slotName)}
             data-test="add-box-block-button"
             title="Add bordered box"

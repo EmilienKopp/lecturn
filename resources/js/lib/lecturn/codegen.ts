@@ -187,9 +187,19 @@ const layoutCss = (content: PresentationContent): string => {
         ...new Set(content.slides.map((slide) => slide.layout)),
     ];
 
-    return usedLayouts
-        .map((layout) => `${INDENT}${cssByLayout[layout]}`)
-        .join('\n');
+    // Slides default to a white background, but the surrounding Animotion
+    // theme is dark; pin a base ink color so text never inherits it.
+    const baseInk =
+        usedLayouts.length > 0
+            ? [
+                  `${INDENT}${usedLayouts.map((layout) => `.layout-${layout}`).join(', ')} { color: #1a1a1a; }`,
+              ]
+            : [];
+
+    return [
+        ...baseInk,
+        ...usedLayouts.map((layout) => `${INDENT}${cssByLayout[layout]}`),
+    ].join('\n');
 };
 
 /**

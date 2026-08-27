@@ -23,8 +23,8 @@
     onclick={() => (editor.selectedBlockId = null)}
 >
     <div
-        class="aspect-video w-full max-w-5xl rounded-md border shadow-sm {isRichText ? 'overflow-visible' : ''}"
-        style="background: {slide.background ?? '#ffffff'}"
+        class="stage-canvas aspect-video w-full max-w-5xl rounded-md {isRichText ? 'overflow-visible' : ''}"
+        style="background: {slide.background ?? '#ffffff'}; color: #1a1a1a"
         data-test="slide-canvas"
     >
         {#if isCustomGrid}
@@ -39,7 +39,7 @@
                     <div class="flex h-full items-center justify-center">
                         <button
                             type="button"
-                            class="text-sm text-muted-foreground hover:text-foreground"
+                            class="text-sm opacity-60 hover:opacity-100"
                             onclick={(e) => { e.stopPropagation(); editor.addRichtextBlock('main'); }}
                         >
                             + Initialize editor
