@@ -20,11 +20,13 @@ use Illuminate\Support\Str;
  * @property string $name
  * @property array<string, mixed> $content
  * @property string $embed_token
+ * @property string|null $yoyotranslate_session_id
+ * @property Carbon|null $yoyotranslate_session_started_at
  * @property Carbon|null $created_at
  * @property Carbon|null $updated_at
  * @property-read Team $team
  */
-#[Fillable(['team_id', 'name', 'content'])]
+#[Fillable(['team_id', 'name', 'content', 'yoyotranslate_session_id', 'yoyotranslate_session_started_at'])]
 #[UsePolicy(PresentationPolicy::class)]
 class PresentationModel extends Model
 {
@@ -57,6 +59,8 @@ class PresentationModel extends Model
             content: PresentationContent::fromArray($this->content),
             created_at: $this->created_at?->toDateTimeImmutable(),
             updated_at: $this->updated_at?->toDateTimeImmutable(),
+            yoyotranslateSessionId: $this->yoyotranslate_session_id,
+            yoyotranslateSessionStartedAt: $this->yoyotranslate_session_started_at?->toDateTimeImmutable(),
         );
     }
 
@@ -72,6 +76,7 @@ class PresentationModel extends Model
     {
         return [
             'content' => 'array',
+            'yoyotranslate_session_started_at' => 'datetime',
         ];
     }
 }

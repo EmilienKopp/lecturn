@@ -3,7 +3,10 @@
 namespace App\Providers;
 
 use App\Domain\Presentation\Contracts\PresentationRepository;
+use App\Domain\Presentation\Contracts\TranslationServiceContract;
+use App\Infrastructure\Adapters\YoYoTranslateAdapter;
 use App\Infrastructure\Persistence\Repositories\EloquentPresentationRepository;
+use Illuminate\Support\Facades\Http;
 use Illuminate\Support\ServiceProvider;
 
 class RepositoryServiceProvider extends ServiceProvider
@@ -11,5 +14,14 @@ class RepositoryServiceProvider extends ServiceProvider
     public function register(): void
     {
         $this->app->bind(PresentationRepository::class, EloquentPresentationRepository::class);
+
+        $this->app->bind(TranslationServiceContract::class, function () {
+            $http = Http::baseUrl((string) config('yoyotranslate.api_base_url'))
+                ->withToken((string) config('yoyotranslate.api_key'))
+                ->acceptJson()
+                ->asJson();
+
+            return new YoYoTranslateAdapter($http);
+        });
     }
 }

@@ -73,3 +73,14 @@ export type SlideLayout = 'full' | 'center' | 'top-main' | 'top-main-footer' | '
 export type Transition = {
 readonly order: number,
 };
+export type YoYoTranslateInfo = {
+readonly session_id: string | null,
+readonly websocket_url: string | null,
+readonly active: boolean,
+readonly started_at: string | null,
+};
+export type YoYoTranslateSession = {
+readonly sessionId: string,
+readonly websocketUrl: string,
+readonly startedAt: string,
+};

@@ -53,4 +53,41 @@ class PresentationReadModel
             'updated_at' => $presentation->updated_at?->toISOString(),
         ];
     }
+
+    /**
+     * @return array{
+     *     id: int,
+     *     name: string,
+     *     content: array<string, mixed>,
+     *     updated_at: string|null,
+     *     yoyotranslate: array{
+     *         session_id: string|null,
+     *         websocket_url: string|null,
+     *         active: bool,
+     *         started_at: string|null
+     *     }
+     * }
+     */
+    public function findForPresenter(int $presentationId): array
+    {
+        $presentation = PresentationsView::query()->findOrFail($presentationId);
+
+        $sessionId = $presentation->yoyotranslate_session_id;
+        $wsBaseUrl = (string) config('yoyotranslate.ws_base_url', 'wss://yoyotranslate.app/session');
+
+        return [
+            'id' => $presentation->id,
+            'name' => $presentation->name,
+            'content' => $presentation->content,
+            'updated_at' => $presentation->updated_at?->toISOString(),
+            'yoyotranslate' => [
+                'session_id' => $sessionId,
+                'websocket_url' => $sessionId !== null
+                    ? rtrim($wsBaseUrl, '/') . '/' . $sessionId
+                    : null,
+                'active' => $sessionId !== null,
+                'started_at' => $presentation->yoyotranslate_session_started_at?->toISOString(),
+            ],
+        ];
+    }
 }
