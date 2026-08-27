@@ -28,6 +28,10 @@ class UpdatePresentationRequest extends FormRequest
             'content.slides.*.id' => ['required', 'string'],
             'content.slides.*.layout' => ['required', Rule::enum(SlideLayout::class)],
             'content.slides.*.slots' => ['sometimes', 'array'],
+            'talk_settings' => ['sometimes', 'array'],
+            'talk_settings.showReactions' => ['sometimes', 'boolean'],
+            'talk_settings.timerMode' => ['sometimes', 'string', Rule::in(['elapsed', 'countdown'])],
+            'talk_settings.durationMinutes' => ['sometimes', 'nullable', 'integer', 'min:1', 'max:480'],
         ];
     }
 }

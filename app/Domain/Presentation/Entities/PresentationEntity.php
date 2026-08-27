@@ -7,6 +7,7 @@ namespace App\Domain\Presentation\Entities;
 use App\Domain\BaseEntity;
 use App\Domain\Presentation\Exceptions\InvalidPresentationContent;
 use App\Domain\Presentation\ValueObjects\PresentationContent;
+use App\Domain\Presentation\ValueObjects\TalkSettings;
 use DateTimeInterface;
 
 class PresentationEntity extends BaseEntity
@@ -15,6 +16,7 @@ class PresentationEntity extends BaseEntity
         public int $team_id,
         public string $name,
         public PresentationContent $content,
+        public TalkSettings $talkSettings = new TalkSettings(),
         public ?int $id = null,
         public ?DateTimeInterface $created_at = null,
         public ?DateTimeInterface $updated_at = null,
@@ -34,6 +36,11 @@ class PresentationEntity extends BaseEntity
         $this->content = $content;
     }
 
+    public function changeTalkSettings(TalkSettings $talkSettings): void
+    {
+        $this->talkSettings = $talkSettings;
+    }
+
     /** @return array<string, mixed> */
     public function toArray(): array
     {
@@ -42,6 +49,7 @@ class PresentationEntity extends BaseEntity
             'team_id' => $this->team_id,
             'name' => $this->name,
             'content' => $this->content->toArray(),
+            'talk_settings' => $this->talkSettings->toArray(),
             'created_at' => $this->created_at,
             'updated_at' => $this->updated_at,
         ];

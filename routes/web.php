@@ -4,6 +4,8 @@ use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\Presentations\CreatePresentationController;
 use App\Http\Controllers\Presentations\DeletePresentationController;
 use App\Http\Controllers\Presentations\EditPresentationController;
+use App\Http\Controllers\Presentations\SendReactionController;
+use App\Http\Controllers\Presentations\ViewerController;
 use App\Http\Controllers\Presentations\EmbedPresentationController;
 use App\Http\Controllers\Presentations\ExportPresentationController;
 use App\Http\Controllers\Presentations\ListPresentationsController;
@@ -19,6 +21,13 @@ Route::inertia('/', 'Welcome')->name('home');
 Route::get('embed/presentations/{presentation:embed_token}.js', EmbedPresentationController::class)
     ->middleware('throttle:60,1')
     ->name('presentations.embed');
+
+Route::get('present/{presentation:embed_token}', ViewerController::class)
+    ->name('presentations.viewer');
+
+Route::post('present/{presentation:embed_token}/reactions', SendReactionController::class)
+    ->middleware('throttle:60,1')
+    ->name('presentations.reactions');
 
 Route::prefix('{current_team}')
     ->middleware(['auth', ValidateSessionWithWorkOS::class, EnsureTeamMembership::class])

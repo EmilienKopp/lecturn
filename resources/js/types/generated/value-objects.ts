@@ -73,3 +73,8 @@ export type SlideLayout = 'full' | 'center' | 'top-main' | 'top-main-footer' | '
 export type Transition = {
 readonly order: number,
 };
+export type TalkSettings = {
+readonly showReactions: boolean,
+readonly timerMode: string,
+readonly durationMinutes: number | null,
+};

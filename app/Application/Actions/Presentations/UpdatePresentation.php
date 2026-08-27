@@ -27,6 +27,10 @@ class UpdatePresentation
             $presentation->replaceContent($command->content);
         }
 
+        if ($command->talkSettings !== null) {
+            $presentation->changeTalkSettings($command->talkSettings);
+        }
+
         $saved = $this->presentations->save($presentation);
 
         if ($command->content !== null) {

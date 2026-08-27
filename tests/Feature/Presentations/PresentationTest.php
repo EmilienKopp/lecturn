@@ -180,7 +180,7 @@ test('an unknown layout is rejected by request validation', function () {
     $response->assertSessionHasErrors('content.slides.0.layout');
 });
 
-test('the present page renders with the presentation content', function () {
+test('the present page renders with the presentation content, talk settings and viewer url', function () {
     $user = User::factory()->create();
     $presentation = PresentationModel::factory()->withSlides(2)->create([
         'team_id' => $user->currentTeam->id,
@@ -197,7 +197,9 @@ test('the present page renders with the presentation content', function () {
     $response->assertInertia(fn (Assert $page) => $page
         ->component('presentations/Present')
         ->where('presentation.id', $presentation->id)
-        ->has('presentation.content.slides', 2),
+        ->has('presentation.content.slides', 2)
+        ->has('presentation.talk_settings')
+        ->has('viewerUrl'),
     );
 });
 

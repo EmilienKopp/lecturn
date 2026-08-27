@@ -25,7 +25,7 @@
         slide.slots[slotName] ?? [];
 </script>
 
-<div class="fixed inset-0 bg-black" data-test="presenter">
+<div class="h-full w-full" data-test="presenter">
     <Presentation
         options={{
             hash: false,

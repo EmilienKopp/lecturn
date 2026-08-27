@@ -21,6 +21,7 @@ class EloquentPresentationRepository implements PresentationRepository
             'team_id' => $presentation->team_id,
             'name' => $presentation->name,
             'content' => $presentation->content->toArray(),
+            'talk_settings' => $presentation->talkSettings->toArray(),
         ];
 
         if ($presentation->id === null) {

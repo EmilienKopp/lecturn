@@ -4,6 +4,7 @@ namespace App\Models;
 
 use App\Domain\Presentation\Entities\PresentationEntity;
 use App\Domain\Presentation\ValueObjects\PresentationContent;
+use App\Domain\Presentation\ValueObjects\TalkSettings;
 use App\Policies\PresentationPolicy;
 use Database\Factories\PresentationModelFactory;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
@@ -19,12 +20,13 @@ use Illuminate\Support\Str;
  * @property int $team_id
  * @property string $name
  * @property array<string, mixed> $content
+ * @property array<string, mixed>|null $talk_settings
  * @property string $embed_token
  * @property Carbon|null $created_at
  * @property Carbon|null $updated_at
  * @property-read Team $team
  */
-#[Fillable(['team_id', 'name', 'content'])]
+#[Fillable(['team_id', 'name', 'content', 'talk_settings'])]
 #[UsePolicy(PresentationPolicy::class)]
 class PresentationModel extends Model
 {
@@ -55,6 +57,7 @@ class PresentationModel extends Model
             team_id: $this->team_id,
             name: $this->name,
             content: PresentationContent::fromArray($this->content),
+            talkSettings: TalkSettings::fromArray($this->talk_settings ?? []),
             created_at: $this->created_at?->toDateTimeImmutable(),
             updated_at: $this->updated_at?->toDateTimeImmutable(),
         );
@@ -72,6 +75,7 @@ class PresentationModel extends Model
     {
         return [
             'content' => 'array',
+            'talk_settings' => 'array',
         ];
     }
 }
