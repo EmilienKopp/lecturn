@@ -41,6 +41,7 @@
                 <div
                     class="{layoutDefinitions[slide.layout]
                         .containerClass} h-full p-12"
+                    style="color: #1a1a1a"
                 >
                     {#each layoutDefinitions[slide.layout].slots as slotName (slotName)}
                         <div class="flex min-h-0 flex-col gap-4">

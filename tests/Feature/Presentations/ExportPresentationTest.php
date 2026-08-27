@@ -25,7 +25,8 @@ test('a presentation can be exported as svelte source', function () {
 
     expect($response->streamedContent())
         ->toContain('<Presentation>')
-        ->toContain("from '@animotion/core'");
+        ->toContain("from '@animotion/core'")
+        ->toContain('color: #1a1a1a');
 });
 
 test('a presentation can be exported as a web component', function () {

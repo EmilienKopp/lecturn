@@ -2,6 +2,7 @@
 
 namespace App\Http\Middleware;
 
+use App\Http\Navigation\AppNavigation;
 use Illuminate\Http\Request;
 use Inertia\Middleware;
 
@@ -45,6 +46,7 @@ class HandleInertiaRequests extends Middleware
             ],
             'sidebarOpen' => ! $request->hasCookie('sidebar_state') || $request->cookie('sidebar_state') === 'true',
             'currentTeam' => fn () => $user?->currentTeam ? $user->toUserTeam($user->currentTeam) : null,
+            'navigation' => fn () => app(AppNavigation::class)->tree($user),
             'teams' => fn () => $user?->toUserTeams(includeCurrent: true) ?? [],
         ];
     }
