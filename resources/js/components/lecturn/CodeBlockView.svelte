@@ -1,6 +1,6 @@
 <script lang="ts">
-    import { highlight } from '@/lib/lecturn/shiki';
     import type { EditorState } from '@/lib/lecturn/editor-state.svelte';
+    import { highlight } from '@/lib/lecturn/shiki';
     import type { Block } from '@/types/generated';
 
     let { editor, block }: { editor: EditorState; block: Block } = $props();

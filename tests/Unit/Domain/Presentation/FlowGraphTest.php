@@ -154,3 +154,33 @@ it('rejects an unknown node type', function () {
         ['id' => 'n1', 'type' => 'portal', 'position' => ['x' => 0, 'y' => 0], 'data' => []],
     ]));
 })->throws(InvalidFlowGraph::class, 'Unknown flow node type');
+
+it('rejects duplicate transition labels within one chain', function () {
+    FlowGraph::fromArray(flowData(
+        [slideNode('n1', 'slide-a'), transitionNode('t1', 'reveal'), transitionNode('t2', 'reveal', 100)],
+        [edge('e1', 'n1', 't1'), edge('e2', 't1', 't2')],
+    ));
+})->throws(InvalidFlowGraph::class, 'Duplicate transition label');
+
+it('allows the same transition label on different slides', function () {
+    $graph = FlowGraph::fromArray(flowData(
+        [
+            slideNode('n1', 'slide-a'),
+            slideNode('n2', 'slide-b', 200),
+            transitionNode('t1', 'reveal'),
+            transitionNode('t2', 'reveal', 100),
+        ],
+        [edge('e1', 'n1', 't1'), edge('e2', 'n2', 't2')],
+    ));
+
+    expect($graph->nodes)->toHaveCount(4);
+});
+
+it('allows unlabeled transitions to repeat within a chain', function () {
+    $graph = FlowGraph::fromArray(flowData(
+        [slideNode('n1', 'slide-a'), transitionNode('t1'), transitionNode('t2', null, 100)],
+        [edge('e1', 'n1', 't1'), edge('e2', 't1', 't2')],
+    ));
+
+    expect($graph->nodes)->toHaveCount(3);
+});

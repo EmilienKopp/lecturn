@@ -94,3 +94,27 @@ it('creates an empty document with a single center slide', function () {
         ->and($content->slides[0]->layout)->toBe(SlideLayout::Center)
         ->and($content->slides[0]->slots)->toBe([]);
 });
+
+it('accepts a block pinned to a flow transition node', function () {
+    $data = validContentArray();
+    $data['slides'][0]['slots']['right'][0]['transition'] = ['nodeId' => 'node-1'];
+
+    $content = PresentationContent::fromArray($data);
+
+    expect($content->toArray()['slides'][0]['slots']['right'][0]['transition'])
+        ->toBe(['nodeId' => 'node-1']);
+});
+
+it('rejects a transition pin with an empty nodeId', function () {
+    $data = validContentArray();
+    $data['slides'][0]['slots']['right'][0]['transition'] = ['nodeId' => ''];
+
+    PresentationContent::fromArray($data);
+})->throws(InvalidPresentationContent::class, 'nodeId cannot be empty');
+
+it('rejects a transition pin with neither nodeId nor order', function () {
+    $data = validContentArray();
+    $data['slides'][0]['slots']['right'][0]['transition'] = [];
+
+    PresentationContent::fromArray($data);
+})->throws(InvalidPresentationContent::class, 'requires a nodeId or a legacy order');

@@ -1,6 +1,7 @@
 <script lang="ts">
-    import CodeBlockView from '@/components/lecturn/CodeBlockView.svelte';
+    import BlockPinMenu from '@/components/lecturn/BlockPinMenu.svelte';
     import BoxBlockView from '@/components/lecturn/BoxBlockView.svelte';
+    import CodeBlockView from '@/components/lecturn/CodeBlockView.svelte';
     import TextBlockView from '@/components/lecturn/TextBlockView.svelte';
     import type { EditorState } from '@/lib/lecturn/editor-state.svelte';
 
@@ -25,9 +26,14 @@
         return blocks.some((b) => {
             const col = b.style.gridColumn;
             const row = b.style.gridRow;
-            if (!col || !row) return false;
+
+            if (!col || !row) {
+                return false;
+            }
+
             const [cs, cspan] = parseGridProp(col);
             const [rs, rspan] = parseGridProp(row);
+
             return r >= rs && r < rs + rspan && c >= cs && c < cs + cspan;
         });
     }
@@ -39,6 +45,7 @@
         const span = spanPart.startsWith('span')
             ? parseInt(spanPart.replace('span', '').trim(), 10)
             : 1;
+
         return [start, span];
     }
 
@@ -47,6 +54,7 @@
             // Plain click selects a placed block if one exists at this cell, otherwise clears
             selectedCells = new Set();
             popoverVisible = false;
+
             return;
         }
 
@@ -71,9 +79,13 @@
     }
 
     function isRectangular(cells: Set<string>): boolean {
-        if (cells.size === 0) return false;
+        if (cells.size === 0) {
+            return false;
+        }
+
         const parsed = [...cells].map((k) => {
             const [r, c] = k.split(',').map(Number);
+
             return { r, c };
         });
         const minR = Math.min(...parsed.map((p) => p.r));
@@ -81,6 +93,7 @@
         const minC = Math.min(...parsed.map((p) => p.c));
         const maxC = Math.max(...parsed.map((p) => p.c));
         const expected = (maxR - minR + 1) * (maxC - minC + 1);
+
         return cells.size === expected;
     }
 
@@ -92,8 +105,10 @@
     } {
         const parsed = [...selectedCells].map((k) => {
             const [r, c] = k.split(',').map(Number);
+
             return { r, c };
         });
+
         return {
             minR: Math.min(...parsed.map((p) => p.r)),
             maxR: Math.max(...parsed.map((p) => p.r)),
@@ -103,7 +118,10 @@
     }
 
     function showPopover() {
-        if (!gridEl) return;
+        if (!gridEl) {
+            return;
+        }
+
         const gridRect = gridEl.getBoundingClientRect();
         const bounds = selectionBounds();
         // Position near the bottom-right of the selection
@@ -177,13 +195,15 @@
                 editor.selectedBlockId = block.id;
             }}
         >
-            {#if block.type === 'text'}
-                <TextBlockView {editor} {block} />
-            {:else if block.type === 'code'}
-                <CodeBlockView {editor} {block} />
-            {:else if block.type === 'box'}
-                <BoxBlockView {editor} {block} />
-            {/if}
+            <BlockPinMenu {editor} {block}>
+                {#if block.type === 'text'}
+                    <TextBlockView {editor} {block} />
+                {:else if block.type === 'code'}
+                    <CodeBlockView {editor} {block} />
+                {:else if block.type === 'box'}
+                    <BoxBlockView {editor} {block} />
+                {/if}
+            </BlockPinMenu>
         </div>
     {/each}
 

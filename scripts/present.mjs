@@ -2,7 +2,7 @@ import { fileURLToPath } from 'node:url';
 /**
  * Presentation export subprocess, invoked by App\Presentation\Presenters\NodePresenter.
  *
- * Reads `{ format, content }` as JSON from stdin and writes the export artifact
+ * Reads `{ format, content, flow }` as JSON from stdin and writes the export artifact
  * to stdout. The Svelte source generation lives exclusively in
  * resources/js/lib/lecturn/codegen.ts (shared with the frontend editor) — this
  * script only orchestrates around it.
@@ -94,12 +94,12 @@ async function buildWebComponent(source, tag) {
 }
 
 try {
-    const { format, content, tag } = JSON.parse(await readStdin());
+    const { format, content, flow, tag } = JSON.parse(await readStdin());
 
     // Node 22.18+ runs TypeScript directly via type stripping.
     const { generatePresentationSvelte } =
         await import('../resources/js/lib/lecturn/codegen.ts');
-    const source = generatePresentationSvelte(content);
+    const source = generatePresentationSvelte(content, flow ?? null);
 
     switch (format) {
         case 'svelte':

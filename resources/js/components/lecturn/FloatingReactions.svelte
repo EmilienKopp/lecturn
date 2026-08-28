@@ -7,7 +7,9 @@
     let counter = 0;
 
     export function spawnReaction(emoji: string): void {
-        if (!enabled) return;
+        if (!enabled) {
+            return;
+        }
 
         const id = ++counter;
         const x = 10 + Math.random() * 80;

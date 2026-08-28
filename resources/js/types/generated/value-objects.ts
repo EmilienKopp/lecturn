@@ -124,5 +124,6 @@ export type TalkSettings = {
     readonly durationMinutes: number | null;
 };
 export type Transition = {
-    readonly order: number;
+    readonly nodeId: string | null;
+    readonly order: number | null;
 };

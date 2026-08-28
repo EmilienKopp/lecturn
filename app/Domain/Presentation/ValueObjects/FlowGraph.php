@@ -124,6 +124,35 @@ readonly class FlowGraph
                 }
             }
         }
+
+        // Transition labels double as step names in the editor's pin picker,
+        // so explicit labels must be unique within a slide's chain.
+        $chainTargetBySource = array_flip($chainSourceByTarget);
+
+        foreach ($nodesById as $node) {
+            if ($node->type !== FlowNodeType::Slide) {
+                continue;
+            }
+
+            $labels = [];
+            $cursor = $chainTargetBySource[$node->id] ?? null;
+
+            while ($cursor !== null) {
+                $label = $nodesById[$cursor]->data['label'] ?? null;
+
+                if (is_string($label) && $label !== '') {
+                    if (isset($labels[$label])) {
+                        throw new InvalidFlowGraph(
+                            "Duplicate transition label \"{$label}\" in the chain of slide node \"{$node->id}\"."
+                        );
+                    }
+
+                    $labels[$label] = true;
+                }
+
+                $cursor = $chainTargetBySource[$cursor] ?? null;
+            }
+        }
     }
 
     /** @param array<string, mixed> $data */

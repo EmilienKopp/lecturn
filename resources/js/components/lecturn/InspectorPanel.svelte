@@ -12,10 +12,51 @@
     const fontWeights = ['normal', 'medium', 'semibold', 'bold'];
 
     const block = $derived(editor.selectedBlock);
+    const transitions = $derived(
+        editor.transitionsForSlide(editor.selectedSlide.id),
+    );
+
+    const setTransition = (blockId: string, value: string) => {
+        if (value === '__new__') {
+            const nodeId = editor.appendTransitionToSlide(
+                editor.selectedSlide.id,
+            );
+
+            if (nodeId) {
+                editor.pinBlock(blockId, nodeId);
+            }
+
+            return;
+        }
+
+        editor.pinBlock(blockId, value || null);
+    };
 </script>
 
 <div class="flex h-full w-64 flex-col gap-6 overflow-y-auto border-l p-4">
     {#if block}
+        {#if block.type !== 'richtext'}
+            <div class="space-y-1">
+                <Label for="block-transition" class="text-xs">Transition</Label>
+                <select
+                    id="block-transition"
+                    class="w-full rounded-md border bg-background px-2 py-1.5 text-sm"
+                    value={block.transition?.nodeId ?? ''}
+                    onchange={(event) =>
+                        setTransition(block.id, event.currentTarget.value)}
+                    data-test="inspector-transition"
+                >
+                    <option value="">Static (always visible)</option>
+                    {#each transitions as transition (transition.nodeId)}
+                        <option value={transition.nodeId}>
+                            {editor.transitionDisplayName(transition)}
+                        </option>
+                    {/each}
+                    <option value="__new__">+ New step</option>
+                </select>
+            </div>
+        {/if}
+
         {#if block.type === 'code'}
             <div class="space-y-1">
                 <Label for="block-lang" class="text-xs">Language</Label>

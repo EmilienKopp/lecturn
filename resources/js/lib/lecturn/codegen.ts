@@ -1,6 +1,19 @@
-import type { Block, PresentationContent, Slide } from '@/types/generated';
+import type {
+    Block,
+    FlowGraph,
+    PresentationContent,
+    Slide,
+} from '@/types/generated';
 
 // Relative + extensioned so Node can run this file natively (scripts/present.mjs).
+import {
+    compileFlow,
+    defaultFlowFromContent,
+    groupBlocksIntoSteps,
+    migrateLegacyTransitions,
+    stepIndexBySlide,
+    type StepIndex,
+} from './flow-compiler.ts';
 import { layoutDefinitions } from './layouts.ts';
 
 interface EditorJsBlock {
@@ -73,6 +86,7 @@ const renderRichtextBlock = (block: Block, depth: number): string => {
     }
 
     let output: EditorJsOutput;
+
     try {
         output = JSON.parse(block.content) as EditorJsOutput;
     } catch {
@@ -82,6 +96,7 @@ const renderRichtextBlock = (block: Block, depth: number): string => {
     const inner = output.blocks
         .map((b) => renderEditorJsBlock(b, depth + 1))
         .join('\n');
+
     return `${pad}<div class="richtext">\n${inner}\n${pad}</div>`;
 };
 
@@ -106,24 +121,28 @@ const renderSlot = (
     slotName: string,
     blocks: Block[],
     depth: number,
+    steps: StepIndex,
 ): string => {
     const pad = INDENT.repeat(depth);
     const lines: string[] = [`${pad}<div class="slot-${slotName}">`];
-
-    const staticBlocks = blocks.filter((block) => !block.transition);
-    const transitionBlocks = blocks
-        .filter((block) => block.transition)
-        .sort(
-            (a, b) => (a.transition?.order ?? 0) - (b.transition?.order ?? 0),
-        );
+    const { staticBlocks, stepGroups } = groupBlocksIntoSteps(blocks, steps);
 
     for (const block of staticBlocks) {
         lines.push(renderBlock(block, depth + 1));
     }
 
-    for (const block of transitionBlocks) {
-        lines.push(`${INDENT.repeat(depth + 1)}<Transition>`);
-        lines.push(renderBlock(block, depth + 2));
+    // Blocks pinned to the same node reveal together: one <Transition> per
+    // node, ordered by chain position (order maps to data-fragment-index,
+    // which also keeps steps in sync across slots).
+    for (const group of stepGroups) {
+        lines.push(
+            `${INDENT.repeat(depth + 1)}<Transition order={${group.order}}>`,
+        );
+
+        for (const block of group.blocks) {
+            lines.push(renderBlock(block, depth + 2));
+        }
+
         lines.push(`${INDENT.repeat(depth + 1)}</Transition>`);
     }
 
@@ -132,7 +151,7 @@ const renderSlot = (
     return lines.join('\n');
 };
 
-const renderSlide = (slide: Slide): string => {
+const renderSlide = (slide: Slide, steps: StepIndex): string => {
     const backgroundStyle = slide.background
         ? ` style="background: ${escapeAttribute(slide.background)}"`
         : '';
@@ -143,6 +162,7 @@ const renderSlide = (slide: Slide): string => {
 
     if (slide.layout === 'rich-text') {
         const blocks = slide.slots['main'] ?? [];
+
         for (const block of blocks) {
             lines.push(renderBlock(block, 2));
         }
@@ -151,7 +171,7 @@ const renderSlide = (slide: Slide): string => {
             const blocks = slide.slots[slotName];
 
             if (blocks && blocks.length > 0) {
-                lines.push(renderSlot(slotName, blocks, 2));
+                lines.push(renderSlot(slotName, blocks, 2, steps));
             }
         }
     }
@@ -207,8 +227,17 @@ const layoutCss = (content: PresentationContent): string => {
  * Svelte component (single-file output).
  */
 export function generatePresentationSvelte(
-    content: PresentationContent,
+    rawContent: PresentationContent,
+    rawFlow: FlowGraph | null = null,
 ): string {
+    const { content, flow } = migrateLegacyTransitions(
+        rawContent,
+        rawFlow ?? defaultFlowFromContent(rawContent),
+    );
+
+    const deck = compileFlow(flow, content);
+    const stepsBySlideId = stepIndexBySlide(deck);
+
     const usesCode = content.slides.some((slide) =>
         Object.values(slide.slots).some((blocks) =>
             blocks.some((block) => block.type === 'code'),
@@ -217,7 +246,11 @@ export function generatePresentationSvelte(
 
     const usesTransition = content.slides.some((slide) =>
         Object.values(slide.slots).some((blocks) =>
-            blocks.some((block) => block.transition),
+            blocks.some(
+                (block) =>
+                    block.transition?.nodeId != null &&
+                    stepsBySlideId.get(slide.id)?.has(block.transition.nodeId),
+            ),
         ),
     );
 
@@ -228,7 +261,11 @@ export function generatePresentationSvelte(
         ...(usesCode ? ['Code'] : []),
     ].join(', ');
 
-    const slides = content.slides.map(renderSlide).join('\n\n');
+    const slides = content.slides
+        .map((slide) =>
+            renderSlide(slide, stepsBySlideId.get(slide.id) ?? new Map()),
+        )
+        .join('\n\n');
 
     return `<script>
 ${INDENT}import { ${imports} } from '@animotion/core';

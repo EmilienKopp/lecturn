@@ -2,9 +2,10 @@
     import Code2 from 'lucide-svelte/icons/code-2';
     import Plus from 'lucide-svelte/icons/plus';
     import Square from 'lucide-svelte/icons/square';
-    import TextBlockView from '@/components/lecturn/TextBlockView.svelte';
-    import CodeBlockView from '@/components/lecturn/CodeBlockView.svelte';
+    import BlockPinMenu from '@/components/lecturn/BlockPinMenu.svelte';
     import BoxBlockView from '@/components/lecturn/BoxBlockView.svelte';
+    import CodeBlockView from '@/components/lecturn/CodeBlockView.svelte';
+    import TextBlockView from '@/components/lecturn/TextBlockView.svelte';
     import type { EditorState } from '@/lib/lecturn/editor-state.svelte';
 
     let { editor, slot: slotName }: { editor: EditorState; slot: string } =
@@ -18,13 +19,15 @@
     data-test="slot-{slotName}"
 >
     {#each blocks as block (block.id)}
-        {#if block.type === 'text'}
-            <TextBlockView {editor} {block} />
-        {:else if block.type === 'code'}
-            <CodeBlockView {editor} {block} />
-        {:else if block.type === 'box'}
-            <BoxBlockView {editor} {block} />
-        {/if}
+        <BlockPinMenu {editor} {block}>
+            {#if block.type === 'text'}
+                <TextBlockView {editor} {block} />
+            {:else if block.type === 'code'}
+                <CodeBlockView {editor} {block} />
+            {:else if block.type === 'box'}
+                <BoxBlockView {editor} {block} />
+            {/if}
+        </BlockPinMenu>
     {/each}
 
     <div class="mt-auto flex items-center justify-center gap-1">

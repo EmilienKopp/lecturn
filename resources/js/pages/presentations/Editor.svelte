@@ -56,9 +56,14 @@
     };
 
     const exportSvelte = () => {
+        // Snapshots: codegen structuredClones its inputs, which rejects
+        // $state proxies.
         downloadFile(
             `${slugify(name)}.svelte`,
-            generatePresentationSvelte(editor.content),
+            generatePresentationSvelte(
+                $state.snapshot(editor.content),
+                $state.snapshot(editor.flow),
+            ),
         );
     };
 

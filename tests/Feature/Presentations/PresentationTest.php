@@ -205,6 +205,7 @@ test('the present page renders with the presentation content, talk settings and 
         ->where('presentation.talk_settings.showDock', true)
         ->where('presentation.talk_settings.timerMode', 'elapsed')
         ->where('presentation.talk_settings.durationMinutes', null)
+        ->has('presentation.flow')
         ->has('viewerUrl'),
     );
 });

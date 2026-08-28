@@ -28,7 +28,7 @@ class PresentationReadModel
     }
 
     /**
-     * @return array{embed_token: string, content: array<string, mixed>}
+     * @return array{embed_token: string, content: array<string, mixed>, flow: array<string, mixed>|null}
      */
     public function findForEmbed(int $presentationId): array
     {
@@ -37,11 +37,12 @@ class PresentationReadModel
         return [
             'embed_token' => $presentation->embed_token,
             'content' => $presentation->content,
+            'flow' => $presentation->flow,
         ];
     }
 
     /**
-     * @return array{id: int, name: string, content: array<string, mixed>, talk_settings: array<string, mixed>, embed_token: string, updated_at: string|null}
+     * @return array{id: int, name: string, content: array<string, mixed>, talk_settings: array<string, mixed>, flow: array<string, mixed>|null, embed_token: string, updated_at: string|null}
      */
     public function findForPresent(int $presentationId): array
     {
@@ -52,6 +53,7 @@ class PresentationReadModel
             'name' => $presentation->name,
             'content' => $presentation->content,
             'talk_settings' => TalkSettings::fromArray($presentation->talk_settings ?? [])->toArray(),
+            'flow' => $presentation->flow,
             'embed_token' => $presentation->embed_token,
             'updated_at' => $presentation->updated_at?->toISOString(),
         ];

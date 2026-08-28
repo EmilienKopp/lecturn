@@ -68,10 +68,21 @@
                           }
                         : {
                               label: node.data.label ?? null,
+                              placeholder: editor.transitionPlaceholder(
+                                  node.id,
+                              ),
                               onLabelChange: (
                                   nodeId: string,
                                   label: string | null,
-                              ) => editor.setTransitionLabel(nodeId, label),
+                              ) => {
+                                  if (
+                                      !editor.setTransitionLabel(nodeId, label)
+                                  ) {
+                                      toast.error(
+                                          'Another transition in this chain already has that name.',
+                                      );
+                                  }
+                              },
                           },
             };
         });

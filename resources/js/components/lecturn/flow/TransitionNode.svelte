@@ -6,6 +6,9 @@
     let { id, data, selected }: NodeProps = $props();
 
     const label = $derived((data.label as string | null) ?? '');
+    const placeholder = $derived(
+        (data.placeholder as string | undefined) ?? 'Transition',
+    );
     const onLabelChange = $derived(
         data.onLabelChange as (nodeId: string, label: string | null) => void,
     );
@@ -23,7 +26,7 @@
 
     <input
         class="nodrag w-28 bg-transparent text-xs outline-none placeholder:italic"
-        placeholder="Transition"
+        {placeholder}
         value={label}
         onchange={(event) =>
             onLabelChange(id, event.currentTarget.value.trim() || null)}

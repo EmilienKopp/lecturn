@@ -1,14 +1,15 @@
 <script lang="ts">
-    import { untrack } from 'svelte';
-    import EditorJS, { type OutputData } from '@editorjs/editorjs';
+    import CodeTool from '@editorjs/code';
+    import EditorJS from '@editorjs/editorjs';
+    import type { OutputData } from '@editorjs/editorjs';
     // @ts-expect-error — no bundled types
     import Header from '@editorjs/header';
     // @ts-expect-error — no bundled types
     import List from '@editorjs/list';
     // @ts-expect-error — no bundled types
-    import CodeTool from '@editorjs/code';
     // @ts-expect-error — no bundled types
     import Quote from '@editorjs/quote';
+    import { untrack } from 'svelte';
     import type { EditorState } from '@/lib/lecturn/editor-state.svelte';
     import type { Block } from '@/types/generated';
 
@@ -17,7 +18,10 @@
     let holderEl = $state<HTMLDivElement | null>(null);
 
     function parseContent(raw: string): OutputData | undefined {
-        if (!raw) return undefined;
+        if (!raw) {
+            return undefined;
+        }
+
         try {
             return JSON.parse(raw) as OutputData;
         } catch {
@@ -26,7 +30,9 @@
     }
 
     $effect(() => {
-        if (!holderEl) return;
+        if (!holderEl) {
+            return;
+        }
 
         const instance = new EditorJS({
             holder: holderEl,

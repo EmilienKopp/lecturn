@@ -4,7 +4,11 @@
     import Presenter from '@/components/lecturn/Presenter.svelte';
     import PresenterDock from '@/components/lecturn/PresenterDock.svelte';
     import { getEcho } from '@/lib/echo';
-    import type { PresentationContent, TalkSettings } from '@/types/generated';
+    import type {
+        FlowGraph,
+        PresentationContent,
+        TalkSettings,
+    } from '@/types/generated';
 
     let {
         presentation,
@@ -15,6 +19,7 @@
             name: string;
             content: PresentationContent;
             talk_settings: TalkSettings;
+            flow: FlowGraph | null;
             embed_token: string;
             updated_at: string | null;
         };
@@ -57,7 +62,10 @@
     >
         <!-- 16:9 constrained slide box -->
         <div class="w-full" style="aspect-ratio: 16/9; max-height: 100vh;">
-            <Presenter content={presentation.content} />
+            <Presenter
+                content={presentation.content}
+                flow={presentation.flow}
+            />
         </div>
 
         <FloatingReactions
