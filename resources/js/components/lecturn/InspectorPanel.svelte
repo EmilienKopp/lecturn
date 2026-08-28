@@ -1,12 +1,80 @@
 <script lang="ts">
+    import { page } from '@inertiajs/svelte';
     import Trash2 from 'lucide-svelte/icons/trash-2';
+    import { toast } from 'svelte-sonner';
+    import DeletePresentationBackgroundController from '@/actions/App/Http/Controllers/Presentations/DeletePresentationBackgroundController';
+    import UploadPresentationBackgroundController from '@/actions/App/Http/Controllers/Presentations/UploadPresentationBackgroundController';
     import LayoutPicker from '@/components/lecturn/LayoutPicker.svelte';
     import { Button } from '@/components/ui/button';
     import { Label } from '@/components/ui/label';
     import type { EditorState } from '@/lib/lecturn/editor-state.svelte';
     import { SUPPORTED_LANGUAGES } from '@/lib/lecturn/shiki';
+    import { uploadImage, xsrfToken } from '@/lib/lecturn/uploads';
 
-    let { editor }: { editor: EditorState } = $props();
+    let {
+        editor,
+        presentationId,
+    }: { editor: EditorState; presentationId: number } = $props();
+
+    let uploadingBackground = $state(false);
+
+    async function uploadBackgroundImage(event: Event) {
+        const input = event.currentTarget as HTMLInputElement;
+        const file = input.files?.[0];
+        const currentTeam = page.props.currentTeam;
+
+        if (!file || !currentTeam) {
+            return;
+        }
+
+        uploadingBackground = true;
+
+        try {
+            const url = await uploadImage(
+                UploadPresentationBackgroundController({
+                    current_team: currentTeam.slug,
+                    presentation: presentationId,
+                }).url,
+                file,
+            );
+
+            if (url === null) {
+                toast.error('Background image upload failed.');
+
+                return;
+            }
+
+            editor.setBackgroundImage(url);
+        } finally {
+            uploadingBackground = false;
+            input.value = '';
+        }
+    }
+
+    async function removeBackgroundImage() {
+        const currentTeam = page.props.currentTeam;
+
+        if (!currentTeam) {
+            return;
+        }
+
+        await fetch(
+            DeletePresentationBackgroundController({
+                current_team: currentTeam.slug,
+                presentation: presentationId,
+            }).url,
+            {
+                method: 'DELETE',
+                credentials: 'same-origin',
+                headers: {
+                    'X-XSRF-TOKEN': xsrfToken(),
+                    Accept: 'application/json',
+                },
+            },
+        );
+
+        editor.setBackgroundImage(null);
+    }
 
     const fontSizes = ['1rem', '1.5rem', '2rem', '2.5rem', '3rem', '4rem'];
     const fontWeights = ['normal', 'medium', 'semibold', 'bold'];
@@ -72,6 +140,21 @@
                         <option value={lang}>{lang}</option>
                     {/each}
                 </select>
+            </div>
+        {/if}
+
+        {#if block.type === 'image'}
+            <div class="space-y-1">
+                <Label for="block-alt" class="text-xs">Alt text</Label>
+                <input
+                    id="block-alt"
+                    type="text"
+                    class="w-full rounded-md border bg-background px-2 py-1.5 text-sm"
+                    value={block.alt ?? ''}
+                    oninput={(event) =>
+                        editor.updateBlockAlt(block.id, event.currentTarget.value)}
+                    data-test="inspector-alt"
+                />
             </div>
         {/if}
 
@@ -188,6 +271,58 @@
                     editor.setBackground(event.currentTarget.value)}
                 data-test="inspector-background"
             />
+            <Button
+                variant="outline"
+                size="sm"
+                class="w-full"
+                onclick={() => editor.applyBackgroundToAllSlides()}
+                data-test="apply-background-all"
+            >
+                Apply to all slides
+            </Button>
+        </div>
+
+        <div class="space-y-1">
+            <Label class="text-xs">Background image (all slides)</Label>
+            {#if editor.backgroundImage}
+                <div
+                    class="h-16 w-full rounded-md border bg-cover bg-center"
+                    style="background-image: url('{editor.backgroundImage}')"
+                    data-test="inspector-background-image-preview"
+                ></div>
+            {/if}
+            <label
+                class="flex h-8 w-full cursor-pointer items-center justify-center rounded-md border text-xs hover:bg-accent {uploadingBackground
+                    ? 'pointer-events-none opacity-60'
+                    : ''}"
+            >
+                {uploadingBackground
+                    ? 'Uploading…'
+                    : editor.backgroundImage
+                      ? 'Replace image'
+                      : 'Upload image'}
+                <input
+                    type="file"
+                    accept="image/jpeg,image/png,image/webp,image/gif"
+                    class="hidden"
+                    onchange={uploadBackgroundImage}
+                    data-test="inspector-background-image-input"
+                />
+            </label>
+            {#if editor.backgroundImage}
+                <Button
+                    variant="outline"
+                    size="sm"
+                    class="w-full"
+                    onclick={removeBackgroundImage}
+                    data-test="remove-background-image"
+                >
+                    Remove image
+                </Button>
+            {/if}
+            <p class="text-[11px] text-muted-foreground">
+                Shows behind every slide that has no background color of its own.
+            </p>
         </div>
 
         <p class="text-xs text-muted-foreground">

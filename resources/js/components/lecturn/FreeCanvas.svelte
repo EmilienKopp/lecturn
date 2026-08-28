@@ -1,4 +1,7 @@
 <script lang="ts">
+    import { page } from '@inertiajs/svelte';
+    import { toast } from 'svelte-sonner';
+    import UploadPresentationImageController from '@/actions/App/Http/Controllers/Presentations/UploadPresentationImageController';
     import BlockPinMenu from '@/components/lecturn/BlockPinMenu.svelte';
     import BoxBlockView from '@/components/lecturn/BoxBlockView.svelte';
     import CodeBlockView from '@/components/lecturn/CodeBlockView.svelte';
@@ -10,13 +13,20 @@
         round2,
         startPointerDrag,
     } from '@/lib/lecturn/free-drag';
+    import { uploadImage } from '@/lib/lecturn/uploads';
 
-    let { editor }: { editor: EditorState } = $props();
+    let {
+        editor,
+        presentationId,
+    }: { editor: EditorState; presentationId: number } = $props();
 
     const slide = $derived(editor.selectedSlide);
     const blocks = $derived(slide.slots['main'] ?? []);
 
     let canvasEl = $state<HTMLDivElement | null>(null);
+    let imageInput = $state<HTMLInputElement | null>(null);
+    let pendingImagePosition = $state<{ x: string; y: string } | null>(null);
+    let uploadingImage = $state(false);
     let popoverVisible = $state(false);
     let popover = $state<{ top: number; left: number; x: number; y: number }>({
         top: 0,
@@ -63,6 +73,51 @@
     function createBlock(type: 'text' | 'code' | 'box') {
         editor.addFreeBlock(String(round2(popover.x)), String(round2(popover.y)), type);
         popoverVisible = false;
+    }
+
+    function insertImage() {
+        pendingImagePosition = {
+            x: String(round2(popover.x)),
+            y: String(round2(popover.y)),
+        };
+        popoverVisible = false;
+        imageInput?.click();
+    }
+
+    async function onImageSelected(event: Event) {
+        const input = event.currentTarget as HTMLInputElement;
+        const file = input.files?.[0];
+        const currentTeam = page.props.currentTeam;
+        const position = pendingImagePosition;
+
+        input.value = '';
+
+        if (!file || !currentTeam || !position) {
+            return;
+        }
+
+        uploadingImage = true;
+
+        try {
+            const url = await uploadImage(
+                UploadPresentationImageController({
+                    current_team: currentTeam.slug,
+                    presentation: presentationId,
+                }).url,
+                file,
+            );
+
+            if (url === null) {
+                toast.error('Image upload failed.');
+
+                return;
+            }
+
+            editor.addFreeImageBlock(position.x, position.y, url);
+        } finally {
+            uploadingImage = false;
+            pendingImagePosition = null;
+        }
     }
 
     function clearSelection() {
@@ -176,7 +231,7 @@
                 </div>
             {/if}
 
-            <div class="h-full w-full overflow-hidden">
+            <div class="h-full w-full">
                 <BlockPinMenu {editor} {block}>
                     {#if block.type === 'text'}
                         <TextBlockView {editor} {block} />
@@ -184,6 +239,13 @@
                         <CodeBlockView {editor} {block} />
                     {:else if block.type === 'box'}
                         <BoxBlockView {editor} {block} />
+                    {:else if block.type === 'image'}
+                        <img
+                            src={block.src ?? ''}
+                            alt={block.alt ?? ''}
+                            class="h-full w-full object-contain"
+                            draggable="false"
+                        />
                     {/if}
                 </BlockPinMenu>
             </div>
@@ -225,6 +287,28 @@
                 class="rounded px-2 py-1 font-mono text-xs hover:bg-accent"
                 onclick={() => createBlock('box')}>Box</button
             >
+            <button
+                type="button"
+                class="rounded px-2 py-1 text-xs hover:bg-accent"
+                onclick={insertImage}>Image</button
+            >
         </div>
     {/if}
+
+    {#if uploadingImage}
+        <div
+            class="pointer-events-none absolute inset-0 flex items-center justify-center bg-background/50 text-sm"
+        >
+            Uploading image…
+        </div>
+    {/if}
+
+    <input
+        bind:this={imageInput}
+        type="file"
+        accept="image/jpeg,image/png,image/webp,image/gif"
+        class="hidden"
+        onchange={onImageSelected}
+        data-test="free-image-input"
+    />
 </div>

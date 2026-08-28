@@ -15,6 +15,9 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Str;
+use Spatie\MediaLibrary\HasMedia;
+use Spatie\MediaLibrary\InteractsWithMedia;
+use Spatie\MediaLibrary\MediaCollections\Models\Media;
 
 /**
  * @property int $id
@@ -30,12 +33,38 @@ use Illuminate\Support\Str;
  */
 #[Fillable(['team_id', 'name', 'content', 'talk_settings', 'flow'])]
 #[UsePolicy(PresentationPolicy::class)]
-class PresentationModel extends Model
+class PresentationModel extends Model implements HasMedia
 {
     /** @use HasFactory<PresentationModelFactory> */
     use HasFactory;
 
+    use InteractsWithMedia;
+
+    public const string BACKGROUND_COLLECTION = 'background';
+
+    public const string IMAGES_COLLECTION = 'images';
+
     protected $table = 'presentations';
+
+    public function registerMediaCollections(): void
+    {
+        $imageMimes = ['image/jpeg', 'image/png', 'image/webp', 'image/gif'];
+
+        $this->addMediaCollection(self::BACKGROUND_COLLECTION)
+            ->singleFile()
+            ->acceptsMimeTypes($imageMimes);
+
+        $this->addMediaCollection(self::IMAGES_COLLECTION)
+            ->acceptsMimeTypes($imageMimes);
+    }
+
+    /** Public URL of the deck-wide background image, or null when unset. */
+    public function backgroundImageUrl(): ?string
+    {
+        $media = $this->getFirstMedia(self::BACKGROUND_COLLECTION);
+
+        return $media instanceof Media ? $media->getFullUrl() : null;
+    }
 
     protected static function booted(): void
     {

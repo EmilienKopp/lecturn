@@ -638,6 +638,27 @@ export class EditorState {
         this.dirty = true;
     }
 
+    get backgroundImage(): string | null {
+        return this.content.backgroundImage ?? null;
+    }
+
+    /** Deck-wide background image URL; shown behind slides without their own color. */
+    setBackgroundImage(url: string | null): void {
+        this.content.backgroundImage = url;
+        this.dirty = true;
+    }
+
+    /** Applies the current slide's background to every slide in the deck. */
+    applyBackgroundToAllSlides(): void {
+        const background = this.selectedSlide.background;
+
+        for (const slide of this.content.slides) {
+            slide.background = background;
+        }
+
+        this.dirty = true;
+    }
+
     updateSlideConfig(config: Record<string, unknown>): void {
         this.selectedSlide.config = {
             ...(this.selectedSlide.config ?? {}),
@@ -697,6 +718,15 @@ export class EditorState {
         }
     }
 
+    addFreeImageBlock(x: string, y: string, src: string): void {
+        const block = this.addBlock('main', 'image');
+        block.style.x = x;
+        block.style.y = y;
+        block.style.width = '30';
+        block.style.height = '25';
+        block.src = src;
+    }
+
     updateBlockContent(blockId: string, content: string): void {
         const block = this.findBlock(blockId);
 
@@ -720,6 +750,15 @@ export class EditorState {
 
         if (block) {
             block.lang = lang;
+            this.dirty = true;
+        }
+    }
+
+    updateBlockAlt(blockId: string, alt: string): void {
+        const block = this.findBlock(blockId);
+
+        if (block) {
+            block.alt = alt;
             this.dirty = true;
         }
     }

@@ -6,13 +6,24 @@
     import type { EditorState } from '@/lib/lecturn/editor-state.svelte';
     import { layoutDefinitions } from '@/lib/lecturn/layouts';
 
-    let { editor }: { editor: EditorState } = $props();
+    let {
+        editor,
+        presentationId,
+    }: { editor: EditorState; presentationId: number } = $props();
 
     const slide = $derived(editor.selectedSlide);
     const definition = $derived(layoutDefinitions[slide.layout]);
     const isCustomGrid = $derived(slide.layout === 'custom-grid');
     const isRichText = $derived(slide.layout === 'rich-text');
     const isFree = $derived(slide.layout === 'free');
+
+    // A slide's own color wins; otherwise the deck-wide background image shows.
+    const stageBackground = $derived(
+        slide.background ??
+            (editor.backgroundImage
+                ? `url('${editor.backgroundImage}') center / cover no-repeat`
+                : '#ffffff'),
+    );
 
     const richtextBlock = $derived(
         isRichText ? (slide.slots['main']?.[0] ?? null) : null,
@@ -30,7 +41,7 @@
         class="stage-canvas aspect-video w-full max-w-5xl rounded-md {isRichText
             ? 'overflow-visible'
             : ''}"
-        style="background: {slide.background ?? '#ffffff'}; color: #1a1a1a"
+        style="background: {stageBackground}; color: #1a1a1a"
         data-test="slide-canvas"
     >
         {#if isCustomGrid}
@@ -38,7 +49,7 @@
                 <GridCanvas {editor} />
             </div>
         {:else if isFree}
-            <FreeCanvas {editor} />
+            <FreeCanvas {editor} {presentationId} />
         {:else if isRichText}
             {#key slide.id}
                 {#if richtextBlock}

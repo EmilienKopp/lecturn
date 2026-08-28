@@ -119,6 +119,23 @@ it('rejects a transition pin with neither nodeId nor order', function () {
     PresentationContent::fromArray($data);
 })->throws(InvalidPresentationContent::class, 'requires a nodeId or a legacy order');
 
+it('round-trips a deck-wide background image url', function () {
+    $data = validContentArray();
+    $data['backgroundImage'] = 'https://cdn.example.com/bg.jpg';
+
+    $content = PresentationContent::fromArray($data);
+
+    expect($content->backgroundImage)->toBe('https://cdn.example.com/bg.jpg')
+        ->and($content->toArray())->toEqual($data);
+});
+
+it('omits the background image key when none is set', function () {
+    $content = PresentationContent::fromArray(validContentArray());
+
+    expect($content->backgroundImage)->toBeNull()
+        ->and($content->toArray())->not->toHaveKey('backgroundImage');
+});
+
 it('exposes a single main slot for the free layout', function () {
     expect(SlideLayout::Free->slots())->toBe(['main'])
         ->and(SlideLayout::Free->usesFreeformSlots())->toBeTrue();

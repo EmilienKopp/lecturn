@@ -26,6 +26,7 @@ class UpdatePresentationRequest extends FormRequest
             'name' => ['sometimes', 'string', 'max:255'],
             'content' => ['sometimes', 'array'],
             'content.version' => ['required_with:content', Rule::in([PresentationContent::VERSION])],
+            'content.backgroundImage' => ['sometimes', 'nullable', 'string'],
             'content.slides' => ['required_with:content', 'array'],
             'content.slides.*.id' => ['required', 'string'],
             'content.slides.*.layout' => ['required', Rule::enum(SlideLayout::class)],

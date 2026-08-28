@@ -2,15 +2,18 @@
 
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\Presentations\CreatePresentationController;
+use App\Http\Controllers\Presentations\DeletePresentationBackgroundController;
 use App\Http\Controllers\Presentations\DeletePresentationController;
 use App\Http\Controllers\Presentations\EditPresentationController;
-use App\Http\Controllers\Presentations\SendReactionController;
-use App\Http\Controllers\Presentations\ViewerController;
 use App\Http\Controllers\Presentations\EmbedPresentationController;
 use App\Http\Controllers\Presentations\ExportPresentationController;
 use App\Http\Controllers\Presentations\ListPresentationsController;
 use App\Http\Controllers\Presentations\PresentPresentationController;
+use App\Http\Controllers\Presentations\SendReactionController;
 use App\Http\Controllers\Presentations\UpdatePresentationController;
+use App\Http\Controllers\Presentations\UploadPresentationBackgroundController;
+use App\Http\Controllers\Presentations\UploadPresentationImageController;
+use App\Http\Controllers\Presentations\ViewerController;
 use App\Http\Controllers\Teams\TeamInvitationController;
 use App\Http\Middleware\EnsureTeamMembership;
 use Illuminate\Support\Facades\Route;
@@ -41,6 +44,9 @@ Route::prefix('{current_team}')
         Route::get('presentations/{presentation}/present', PresentPresentationController::class)->name('presentations.present');
         Route::get('presentations/{presentation}/export', ExportPresentationController::class)->name('presentations.export');
         Route::put('presentations/{presentation}', UpdatePresentationController::class)->name('presentations.update');
+        Route::post('presentations/{presentation}/background', UploadPresentationBackgroundController::class)->name('presentations.background.store');
+        Route::post('presentations/{presentation}/images', UploadPresentationImageController::class)->name('presentations.images.store');
+        Route::delete('presentations/{presentation}/background', DeletePresentationBackgroundController::class)->name('presentations.background.destroy');
         Route::delete('presentations/{presentation}', DeletePresentationController::class)->name('presentations.destroy');
     });
 

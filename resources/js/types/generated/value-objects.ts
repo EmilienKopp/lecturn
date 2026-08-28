@@ -90,6 +90,7 @@ export type PaginatedDataCollection<TKey, TValue> = LengthAwarePaginator<TKey, T
 export type PresentationContent = {
 readonly version: string,
 readonly slides: Slide[],
+readonly backgroundImage: string | null,
 };
 export type Slide = {
 readonly id: string,

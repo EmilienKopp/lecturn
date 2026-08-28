@@ -107,7 +107,11 @@
     >
         {#each content.slides as slide (slide.id)}
             <Slide
-                background={slide.background ?? '#ffffff'}
+                background={slide.background ??
+                    (content.backgroundImage ? undefined : '#ffffff')}
+                image={slide.background
+                    ? undefined
+                    : (content.backgroundImage ?? undefined)}
                 class="h-full w-full"
             >
                 {#if slide.layout === 'free'}

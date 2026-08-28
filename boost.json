@@ -12,6 +12,7 @@
         "wayfinder-development",
         "pest-testing",
         "inertia-svelte-development",
+        "echo-development",
         "tailwindcss-development"
     ]
 }

@@ -201,13 +201,22 @@ const renderSlot = (
     return lines.join('\n');
 };
 
-const renderSlide = (slide: Slide, steps: StepIndex): string => {
-    const backgroundStyle = slide.background
-        ? ` style="background: ${escapeAttribute(slide.background)}"`
-        : '';
+const renderSlide = (
+    slide: Slide,
+    steps: StepIndex,
+    backgroundImage: string | null,
+): string => {
+    // A slide's own color wins; otherwise the deck-wide image is the backdrop.
+    let backgroundAttr = '';
+
+    if (slide.background) {
+        backgroundAttr = ` style="background: ${escapeAttribute(slide.background)}"`;
+    } else if (backgroundImage) {
+        backgroundAttr = ` image="${escapeAttribute(backgroundImage)}"`;
+    }
 
     const lines: string[] = [
-        `${INDENT}<Slide class="layout-${slide.layout}"${backgroundStyle}>`,
+        `${INDENT}<Slide class="layout-${slide.layout}"${backgroundAttr}>`,
     ];
 
     if (slide.layout === 'rich-text') {
@@ -320,7 +329,11 @@ export function generatePresentationSvelte(
 
     const slides = content.slides
         .map((slide) =>
-            renderSlide(slide, stepsBySlideId.get(slide.id) ?? new Map()),
+            renderSlide(
+                slide,
+                stepsBySlideId.get(slide.id) ?? new Map(),
+                content.backgroundImage ?? null,
+            ),
         )
         .join('\n\n');
 

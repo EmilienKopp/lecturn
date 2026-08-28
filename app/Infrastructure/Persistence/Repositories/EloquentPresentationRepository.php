@@ -39,4 +39,32 @@ class EloquentPresentationRepository implements PresentationRepository
     {
         PresentationModel::whereKey($id)->delete();
     }
+
+    public function storeBackgroundImage(int $id, string $filePath, string $fileName): string
+    {
+        $model = PresentationModel::findOrFail($id);
+
+        $media = $model->addMedia($filePath)
+            ->usingFileName($fileName)
+            ->toMediaCollection(PresentationModel::BACKGROUND_COLLECTION);
+
+        return $media->getFullUrl();
+    }
+
+    public function clearBackgroundImage(int $id): void
+    {
+        PresentationModel::findOrFail($id)
+            ->clearMediaCollection(PresentationModel::BACKGROUND_COLLECTION);
+    }
+
+    public function storeImage(int $id, string $filePath, string $fileName): string
+    {
+        $model = PresentationModel::findOrFail($id);
+
+        $media = $model->addMedia($filePath)
+            ->usingFileName($fileName)
+            ->toMediaCollection(PresentationModel::IMAGES_COLLECTION);
+
+        return $media->getFullUrl();
+    }
 }

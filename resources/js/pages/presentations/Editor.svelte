@@ -115,8 +115,8 @@
     {:else}
         <div class="flex min-h-0 flex-1">
             <SlideNavigator {editor} />
-            <SlideCanvas {editor} />
-            <InspectorPanel {editor} />
+            <SlideCanvas {editor} presentationId={presentation.id} />
+            <InspectorPanel {editor} presentationId={presentation.id} />
         </div>
     {/if}
 </div>
