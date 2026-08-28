@@ -609,6 +609,21 @@ export class EditorState {
             slide.config = { rows: 3, cols: 3 } as any;
         }
 
+        // Free layout positions blocks absolutely; cascade any block arriving
+        // without coordinates so incoming content doesn't stack invisibly.
+        if (layout === 'free') {
+            let cascade = 0;
+
+            for (const block of slide.slots['main'] ?? []) {
+                if (block.style.x === null) {
+                    block.style.x = '10';
+                    block.style.y = String(10 + cascade * 12);
+                    block.style.width ??= '30';
+                    cascade += 1;
+                }
+            }
+        }
+
         // Rich-text layout owns the entire slide; replace content with a single richtext block.
         if (layout === 'rich-text') {
             slide.slots = { main: [this.buildRichtextBlock()] };
@@ -661,6 +676,21 @@ export class EditorState {
         const block = this.addBlock(slot, type);
         block.style.gridColumn = gridColumn;
         block.style.gridRow = gridRow;
+
+        if (type === 'code') {
+            block.lang = 'typescript';
+        }
+    }
+
+    addFreeBlock(
+        x: string,
+        y: string,
+        type: 'text' | 'code' | 'box',
+    ): void {
+        const block = this.addBlock('main', type);
+        block.style.x = x;
+        block.style.y = y;
+        block.style.width = '30';
 
         if (type === 'code') {
             block.lang = 'typescript';
@@ -731,6 +761,10 @@ export class EditorState {
                 backgroundColor: null,
                 gridColumn: null,
                 gridRow: null,
+                x: null,
+                y: null,
+                width: null,
+                height: null,
             },
             transition: null,
             lang: null,
@@ -752,6 +786,10 @@ export class EditorState {
                 backgroundColor: null,
                 gridColumn: null,
                 gridRow: null,
+                x: null,
+                y: null,
+                width: null,
+                height: null,
             },
             transition: null,
             lang: null,

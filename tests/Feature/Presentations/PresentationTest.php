@@ -135,6 +135,47 @@ test('presentation content can be saved', function () {
     expect($stored->content['slides'][0]['slots']['left'][0]['content'])->toBe('Hello world');
 });
 
+test('a free-layout slide with positioned blocks can be saved', function () {
+    $user = User::factory()->create();
+    $presentation = PresentationModel::factory()->create(['team_id' => $user->currentTeam->id]);
+
+    $content = [
+        'version' => '1.0',
+        'slides' => [
+            [
+                'id' => 'slide-1',
+                'layout' => 'free',
+                'background' => '#ffffff',
+                'slots' => [
+                    'main' => [
+                        [
+                            'id' => 'block-1',
+                            'type' => 'text',
+                            'content' => 'Floating',
+                            'style' => ['x' => '12.5', 'y' => '20', 'width' => '30'],
+                            'transition' => null,
+                        ],
+                    ],
+                ],
+            ],
+        ],
+    ];
+
+    $response = $this
+        ->actingAs($user)
+        ->put(route('presentations.update', [
+            'current_team' => $user->currentTeam->slug,
+            'presentation' => $presentation->id,
+        ]), ['content' => $content]);
+
+    $response->assertRedirect();
+    $response->assertSessionHasNoErrors();
+
+    $stored = PresentationModel::findOrFail($presentation->id);
+    expect($stored->content['slides'][0]['slots']['main'][0]['style'])
+        ->toBe(['x' => '12.5', 'y' => '20', 'width' => '30']);
+});
+
 test('invalid content is rejected with a validation error', function () {
     $user = User::factory()->create();
     $presentation = PresentationModel::factory()->create(['team_id' => $user->currentTeam->id]);

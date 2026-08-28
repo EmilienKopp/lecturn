@@ -23,8 +23,8 @@ readonly class Slide
             throw new InvalidPresentationContent('Slide id cannot be empty.');
         }
 
-        // custom-grid and rich-text use a single 'main' slot with free-form block placement.
-        if ($this->layout !== SlideLayout::CustomGrid && $this->layout !== SlideLayout::RichText) {
+        // Freeform layouts use a single 'main' slot with free-form block placement.
+        if (! $this->layout->usesFreeformSlots()) {
             $allowedSlots = $this->layout->slots();
 
             foreach (array_keys($this->slots) as $slotName) {

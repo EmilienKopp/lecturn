@@ -60,6 +60,11 @@ export const layoutDefinitions: Record<SlideLayout, LayoutDefinition> = {
         slots: ['main'],
         containerClass: 'h-full overflow-y-auto',
     },
+    free: {
+        label: 'Free',
+        slots: ['main'],
+        containerClass: 'relative h-full',
+    },
 };
 
 export const availableLayouts: SlideLayout[] = [
@@ -71,4 +76,5 @@ export const availableLayouts: SlideLayout[] = [
     'grid-2x2',
     'custom-grid',
     'rich-text',
+    'free',
 ];

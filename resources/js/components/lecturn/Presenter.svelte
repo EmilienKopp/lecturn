@@ -4,10 +4,12 @@
     import {
         compileFlow,
         defaultFlowFromContent,
+        flattenFreeSteps,
         groupBlocksIntoSteps,
         migrateLegacyTransitions,
         stepIndexBySlide,
     } from '@/lib/lecturn/flow-compiler';
+    import { FREE_DEFAULTS } from '@/lib/lecturn/free-drag';
     import { layoutDefinitions } from '@/lib/lecturn/layouts';
     import type {
         Block,
@@ -57,6 +59,26 @@
             slide.slots[slotName] ?? [],
             stepsBySlideId.get(slide.id) ?? new Map(),
         );
+
+    const freeSteps = (slide: SlideData) =>
+        flattenFreeSteps(
+            slide.slots['main'] ?? [],
+            stepsBySlideId.get(slide.id) ?? new Map(),
+        );
+
+    const freeBlockStyle = (block: Block): string => {
+        const parts = [
+            `left: ${block.style.x ?? FREE_DEFAULTS.x}%;`,
+            `top: ${block.style.y ?? FREE_DEFAULTS.y}%;`,
+            `width: ${block.style.width ?? FREE_DEFAULTS.width}%;`,
+        ];
+
+        if (block.style.height !== null) {
+            parts.push(`height: ${block.style.height}%;`);
+        }
+
+        return parts.join(' ');
+    };
 </script>
 
 {#snippet blockView(block: Block)}
@@ -88,6 +110,27 @@
                 background={slide.background ?? '#ffffff'}
                 class="h-full w-full"
             >
+                {#if slide.layout === 'free'}
+                    <div
+                        class="relative mx-auto w-full"
+                        style="aspect-ratio: 16 / 9; color: #1a1a1a; text-align: left;"
+                    >
+                        {#each freeSteps(slide) as { block, order } (block.id)}
+                            <div
+                                class="absolute"
+                                style={freeBlockStyle(block)}
+                            >
+                                {#if order !== null}
+                                    <Transition {order}>
+                                        {@render blockView(block)}
+                                    </Transition>
+                                {:else}
+                                    {@render blockView(block)}
+                                {/if}
+                            </div>
+                        {/each}
+                    </div>
+                {:else}
                 <div
                     class="{layoutDefinitions[slide.layout]
                         .containerClass} h-full p-12"
@@ -112,6 +155,7 @@
                         </div>
                     {/each}
                 </div>
+                {/if}
             </Slide>
         {/each}
     </Presentation>

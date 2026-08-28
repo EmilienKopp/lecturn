@@ -29,6 +29,51 @@ test('a presentation can be exported as svelte source', function () {
         ->toContain('color: #1a1a1a');
 });
 
+test('a free-layout slide exports absolutely positioned blocks', function () {
+    $user = User::factory()->create();
+    $presentation = PresentationModel::factory()->create([
+        'team_id' => $user->currentTeam->id,
+        'name' => 'Free Deck',
+        'content' => [
+            'version' => '1.0',
+            'slides' => [
+                [
+                    'id' => 'slide-1',
+                    'layout' => 'free',
+                    'background' => '#ffffff',
+                    'slots' => [
+                        'main' => [
+                            [
+                                'id' => 'block-1',
+                                'type' => 'text',
+                                'content' => 'Floating',
+                                'style' => ['x' => '12.5', 'y' => '20', 'width' => '30'],
+                                'transition' => null,
+                            ],
+                        ],
+                    ],
+                ],
+            ],
+        ],
+    ]);
+
+    $response = $this
+        ->actingAs($user)
+        ->get(route('presentations.export', [
+            'current_team' => $user->currentTeam->slug,
+            'presentation' => $presentation->id,
+            'format' => 'svelte',
+        ]));
+
+    $response->assertOk();
+
+    expect($response->streamedContent())
+        ->toContain('.layout-free')
+        ->toContain('class="free-block"')
+        ->toContain('left: 12.5%')
+        ->toContain('top: 20%');
+});
+
 test('a presentation can be exported as a web component', function () {
     $user = User::factory()->create();
     $presentation = PresentationModel::factory()->withSlides(1)->create([

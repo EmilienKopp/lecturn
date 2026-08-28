@@ -14,6 +14,10 @@ readonly class BlockStyle
         public ?string $backgroundColor = null,
         public ?string $gridColumn = null,
         public ?string $gridRow = null,
+        public ?string $x = null,
+        public ?string $y = null,
+        public ?string $width = null,
+        public ?string $height = null,
     ) {}
 
     /** @param array<string, mixed> $data */
@@ -27,6 +31,10 @@ readonly class BlockStyle
             backgroundColor: isset($data['backgroundColor']) ? (string) $data['backgroundColor'] : null,
             gridColumn: isset($data['gridColumn']) ? (string) $data['gridColumn'] : null,
             gridRow: isset($data['gridRow']) ? (string) $data['gridRow'] : null,
+            x: isset($data['x']) ? (string) $data['x'] : null,
+            y: isset($data['y']) ? (string) $data['y'] : null,
+            width: isset($data['width']) ? (string) $data['width'] : null,
+            height: isset($data['height']) ? (string) $data['height'] : null,
         );
     }
 
@@ -41,6 +49,10 @@ readonly class BlockStyle
             'backgroundColor' => $this->backgroundColor,
             'gridColumn' => $this->gridColumn,
             'gridRow' => $this->gridRow,
+            'x' => $this->x,
+            'y' => $this->y,
+            'width' => $this->width,
+            'height' => $this->height,
         ], static fn (?string $value): bool => $value !== null);
     }
 }

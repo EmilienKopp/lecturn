@@ -6,6 +6,7 @@
 
     const slide = $derived(editor.selectedSlide);
     const isCustomGrid = $derived(slide.layout === 'custom-grid');
+    const isFree = $derived(slide.layout === 'free');
     const gridRows = $derived((slide.config?.rows as number | undefined) ?? 3);
     const gridCols = $derived((slide.config?.cols as number | undefined) ?? 3);
 </script>
@@ -82,6 +83,16 @@
             </div>
             <p class="text-[11px] text-muted-foreground">
                 Ctrl+click cells to select a region, then pick a block type.
+            </p>
+        </div>
+    {/if}
+
+    {#if isFree}
+        <div class="rounded-md border p-3">
+            <p class="text-[11px] text-muted-foreground">
+                Double-click the canvas to add a block. Select a block, then drag
+                its top bar to move or the corner to resize. Double-click the
+                corner to reset its height.
             </p>
         </div>
     {/if}

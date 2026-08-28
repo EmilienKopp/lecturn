@@ -9,11 +9,13 @@ import type {
 import {
     compileFlow,
     defaultFlowFromContent,
+    flattenFreeSteps,
     groupBlocksIntoSteps,
     migrateLegacyTransitions,
     stepIndexBySlide,
     type StepIndex,
 } from './flow-compiler.ts';
+import { FREE_DEFAULTS } from './free-drag.ts';
 import { layoutDefinitions } from './layouts.ts';
 
 interface EditorJsBlock {
@@ -117,6 +119,54 @@ const renderBlock = (block: Block, depth: number): string => {
     }
 };
 
+const freeBlockStyle = (block: Block): string => {
+    const style = block.style;
+    const x = style.x ?? String(FREE_DEFAULTS.x);
+    const y = style.y ?? String(FREE_DEFAULTS.y);
+    const width = style.width ?? String(FREE_DEFAULTS.width);
+    const parts = [`left: ${x}%;`, `top: ${y}%;`, `width: ${width}%;`];
+
+    if (style.height !== null) {
+        parts.push(`height: ${style.height}%;`);
+    }
+
+    return parts.join(' ');
+};
+
+const renderFreeSlot = (
+    blocks: Block[],
+    depth: number,
+    steps: StepIndex,
+): string => {
+    const pad = INDENT.repeat(depth);
+    const inner = depth + 1;
+    // A fixed 16:9 stage owns the coordinate space, matching the editor exactly
+    // and staying immune to Reveal's content-centering of the slide section.
+    const lines: string[] = [`${pad}<div class="free-stage">`];
+
+    // Each block gets its own absolutely-positioned div so Animotion's
+    // <Transition> wrapper never sits between the block and its coordinates.
+    for (const { block, order } of flattenFreeSteps(blocks, steps)) {
+        lines.push(
+            `${INDENT.repeat(inner)}<div class="free-block" style="${escapeAttribute(freeBlockStyle(block))}">`,
+        );
+
+        if (order !== null) {
+            lines.push(`${INDENT.repeat(inner + 1)}<Transition order={${order}}>`);
+            lines.push(renderBlock(block, inner + 2));
+            lines.push(`${INDENT.repeat(inner + 1)}</Transition>`);
+        } else {
+            lines.push(renderBlock(block, inner + 1));
+        }
+
+        lines.push(`${INDENT.repeat(inner)}</div>`);
+    }
+
+    lines.push(`${pad}</div>`);
+
+    return lines.join('\n');
+};
+
 const renderSlot = (
     slotName: string,
     blocks: Block[],
@@ -166,6 +216,12 @@ const renderSlide = (slide: Slide, steps: StepIndex): string => {
         for (const block of blocks) {
             lines.push(renderBlock(block, 2));
         }
+    } else if (slide.layout === 'free') {
+        const blocks = slide.slots['main'] ?? [];
+
+        if (blocks.length > 0) {
+            lines.push(renderFreeSlot(blocks, 2, steps));
+        }
     } else {
         for (const slotName of layoutDefinitions[slide.layout].slots) {
             const blocks = slide.slots[slotName];
@@ -199,6 +255,7 @@ const layoutCss = (content: PresentationContent): string => {
             '.layout-grid-2x3 { display: grid; height: 100%; grid-template-columns: repeat(3, 1fr); grid-template-rows: 1fr 1fr; gap: 1rem; }',
         'custom-grid':
             '.layout-custom-grid { display: grid; height: 100%; gap: 0.25rem; }',
+        free: '.layout-free { position: relative; height: 100%; } .free-stage { position: relative; width: 100%; aspect-ratio: 16 / 9; margin: 0 auto; text-align: left; } .free-stage .free-block { position: absolute; }',
         'rich-text':
             '.layout-rich-text { height: 100%; overflow-y: auto; padding: 2rem; } .layout-rich-text h1 { font-size: 2rem; font-weight: 700; } .layout-rich-text h2 { font-size: 1.5rem; font-weight: 600; } .layout-rich-text h3 { font-size: 1.25rem; font-weight: 600; } .layout-rich-text ul, .layout-rich-text ol { padding-left: 1.5rem; list-style: revert; } .layout-rich-text blockquote { border-left: 3px solid currentColor; padding-left: 1rem; } .layout-rich-text pre { background: #1e2030; color: #cdd6f4; border-radius: 0.375rem; padding: 0.75rem; } .layout-rich-text .box { border: 2px solid; border-radius: 0.375rem; padding: 1rem; }',
     };

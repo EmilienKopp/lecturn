@@ -16,6 +16,7 @@ enum SlideLayout: string
     case Grid2x3 = 'grid-2x3';
     case CustomGrid = 'custom-grid';
     case RichText = 'rich-text';
+    case Free = 'free';
 
     /**
      * @return list<string>
@@ -23,12 +24,24 @@ enum SlideLayout: string
     public function slots(): array
     {
         return match ($this) {
-            self::Full, self::Center, self::CustomGrid, self::RichText => ['main'],
+            self::Full, self::Center, self::CustomGrid, self::RichText, self::Free => ['main'],
             self::TopMain => ['top', 'main'],
             self::TopMainFooter => ['top', 'main', 'footer'],
             self::LeftRight, self::LeftWideRight => ['left', 'right'],
             self::Grid2x2 => ['a', 'b', 'c', 'd'],
             self::Grid2x3 => ['a', 'b', 'c', 'd', 'e', 'f'],
+        };
+    }
+
+    /**
+     * Layouts that place blocks freely in a single 'main' slot rather than
+     * validating them against named slots.
+     */
+    public function usesFreeformSlots(): bool
+    {
+        return match ($this) {
+            self::CustomGrid, self::RichText, self::Free => true,
+            default => false,
         };
     }
 }

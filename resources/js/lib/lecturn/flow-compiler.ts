@@ -154,6 +154,28 @@ export function groupBlocksIntoSteps(
     };
 }
 
+export type FreeStep = {
+    block: Block;
+    /** Reveal step, or null when the block is always visible. */
+    order: number | null;
+};
+
+/**
+ * Free layout positions each block absolutely, so blocks reveal individually
+ * rather than in shared step containers. This keeps content order (paint order)
+ * while resolving each block's reveal step via the same step index. Blocks
+ * pinned to the same node share an order and reveal together.
+ */
+export function flattenFreeSteps(blocks: Block[], steps: StepIndex): FreeStep[] {
+    return blocks.map((block) => ({
+        block,
+        order:
+            block.transition?.nodeId != null
+                ? (steps.get(block.transition.nodeId) ?? null)
+                : null,
+    }));
+}
+
 /** Fallback graph for presentations saved before the flow builder existed. */
 export function defaultFlowFromContent(
     content: PresentationContent,

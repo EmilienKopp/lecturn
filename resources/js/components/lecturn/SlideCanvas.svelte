@@ -1,4 +1,5 @@
 <script lang="ts">
+    import FreeCanvas from '@/components/lecturn/FreeCanvas.svelte';
     import GridCanvas from '@/components/lecturn/GridCanvas.svelte';
     import RichTextEditor from '@/components/lecturn/RichTextEditor.svelte';
     import SlotRenderer from '@/components/lecturn/SlotRenderer.svelte';
@@ -11,6 +12,7 @@
     const definition = $derived(layoutDefinitions[slide.layout]);
     const isCustomGrid = $derived(slide.layout === 'custom-grid');
     const isRichText = $derived(slide.layout === 'rich-text');
+    const isFree = $derived(slide.layout === 'free');
 
     const richtextBlock = $derived(
         isRichText ? (slide.slots['main']?.[0] ?? null) : null,
@@ -35,6 +37,8 @@
             <div class="h-full w-full p-8">
                 <GridCanvas {editor} />
             </div>
+        {:else if isFree}
+            <FreeCanvas {editor} />
         {:else if isRichText}
             {#key slide.id}
                 {#if richtextBlock}
