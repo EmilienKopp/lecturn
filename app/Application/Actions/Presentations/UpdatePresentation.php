@@ -31,6 +31,11 @@ class UpdatePresentation
             $presentation->changeTalkSettings($command->talkSettings);
         }
 
+        // After replaceContent so slide references validate against the new slides.
+        if ($command->flow !== null) {
+            $presentation->replaceFlow($command->flow);
+        }
+
         $saved = $this->presentations->save($presentation);
 
         if ($command->content !== null) {

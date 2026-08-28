@@ -16,7 +16,8 @@
         {#each availableLayouts as layout (layout)}
             <button
                 type="button"
-                class="rounded border p-2 text-xs transition-colors hover:bg-accent {slide.layout === layout
+                class="rounded border p-2 text-xs transition-colors hover:bg-accent {slide.layout ===
+                layout
                     ? 'border-primary bg-accent'
                     : ''}"
                 onclick={() => editor.setLayout(layout)}
@@ -29,7 +30,9 @@
 
     {#if isCustomGrid}
         <div class="space-y-2 rounded-md border p-3">
-            <span class="text-xs font-medium text-muted-foreground">Grid dimensions</span>
+            <span class="text-xs font-medium text-muted-foreground"
+                >Grid dimensions</span
+            >
             <div class="flex items-center gap-3">
                 <label class="flex flex-1 flex-col gap-1">
                     <span class="text-xs text-muted-foreground">Rows</span>
@@ -41,7 +44,14 @@
                         value={gridRows}
                         onchange={(e) =>
                             editor.updateSlideConfig({
-                                rows: Math.max(1, Math.min(12, parseInt(e.currentTarget.value, 10) || 3)),
+                                rows: Math.max(
+                                    1,
+                                    Math.min(
+                                        12,
+                                        parseInt(e.currentTarget.value, 10) ||
+                                            3,
+                                    ),
+                                ),
                             })}
                         data-test="grid-rows-input"
                     />
@@ -57,7 +67,14 @@
                         value={gridCols}
                         onchange={(e) =>
                             editor.updateSlideConfig({
-                                cols: Math.max(1, Math.min(12, parseInt(e.currentTarget.value, 10) || 3)),
+                                cols: Math.max(
+                                    1,
+                                    Math.min(
+                                        12,
+                                        parseInt(e.currentTarget.value, 10) ||
+                                            3,
+                                    ),
+                                ),
                             })}
                         data-test="grid-cols-input"
                     />

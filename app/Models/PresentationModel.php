@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use App\Domain\Presentation\Entities\PresentationEntity;
+use App\Domain\Presentation\ValueObjects\FlowGraph;
 use App\Domain\Presentation\ValueObjects\PresentationContent;
 use App\Domain\Presentation\ValueObjects\TalkSettings;
 use App\Policies\PresentationPolicy;
@@ -21,12 +22,13 @@ use Illuminate\Support\Str;
  * @property string $name
  * @property array<string, mixed> $content
  * @property array<string, mixed>|null $talk_settings
+ * @property array<string, mixed>|null $flow
  * @property string $embed_token
  * @property Carbon|null $created_at
  * @property Carbon|null $updated_at
  * @property-read Team $team
  */
-#[Fillable(['team_id', 'name', 'content', 'talk_settings'])]
+#[Fillable(['team_id', 'name', 'content', 'talk_settings', 'flow'])]
 #[UsePolicy(PresentationPolicy::class)]
 class PresentationModel extends Model
 {
@@ -58,6 +60,7 @@ class PresentationModel extends Model
             name: $this->name,
             content: PresentationContent::fromArray($this->content),
             talkSettings: TalkSettings::fromArray($this->talk_settings ?? []),
+            flow: $this->flow !== null ? FlowGraph::fromArray($this->flow) : null,
             created_at: $this->created_at?->toDateTimeImmutable(),
             updated_at: $this->updated_at?->toDateTimeImmutable(),
         );
@@ -76,6 +79,7 @@ class PresentationModel extends Model
         return [
             'content' => 'array',
             'talk_settings' => 'array',
+            'flow' => 'array',
         ];
     }
 }

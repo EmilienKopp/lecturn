@@ -1,28 +1,39 @@
+import { SvelteSet } from 'svelte/reactivity';
+import { defaultFlowFromContent } from '@/lib/lecturn/flow-compiler';
+import { layoutDefinitions } from '@/lib/lecturn/layouts';
 import type {
     Block,
     BlockStyle,
+    FlowGraph,
+    NodePosition,
     PresentationContent,
     Slide,
     SlideLayout,
 } from '@/types/generated';
-import { layoutDefinitions } from '@/lib/lecturn/layouts';
 
 /** Editor-side mutable mirror of the generated (readonly) content types. */
 type Mutable<T> = { -readonly [K in keyof T]: Mutable<T[K]> };
 type MutableContent = Mutable<PresentationContent>;
 type MutableSlide = Mutable<Slide>;
 type MutableBlock = Mutable<Block>;
+type MutableFlow = Mutable<FlowGraph>;
+type MutableFlowNode = MutableFlow['nodes'][number];
 
 export class EditorState {
     content = $state<MutableContent>() as MutableContent;
+    flow = $state<MutableFlow>() as MutableFlow;
     selectedSlideIndex = $state(0);
     selectedBlockId = $state<string | null>(null);
     dirty = $state(false);
 
-    constructor(content: PresentationContent) {
+    constructor(content: PresentationContent, flow: FlowGraph | null = null) {
         // Inertia props arrive as $state proxies, which structuredClone
         // rejects; $state.snapshot produces a deep plain copy.
         this.content = $state.snapshot(content) as MutableContent;
+        this.flow = $state.snapshot(
+            flow ?? defaultFlowFromContent(this.content),
+        ) as MutableFlow;
+        this.syncSlideNodes();
     }
 
     get selectedSlide(): MutableSlide {
@@ -47,6 +58,7 @@ export class EditorState {
         });
         this.selectedSlideIndex = this.content.slides.length - 1;
         this.selectedBlockId = null;
+        this.syncSlideNodes();
         this.dirty = true;
     }
 
@@ -61,7 +73,224 @@ export class EditorState {
             this.content.slides.length - 1,
         );
         this.selectedBlockId = null;
+        this.syncSlideNodes();
         this.dirty = true;
+    }
+
+    // ── Flow graph ──────────────────────────────────────────────────────
+
+    /**
+     * Reconciles slide nodes with content.slides: every slide gets exactly
+     * one node; nodes whose slide is gone are removed together with their
+     * transition chain and touching edges. Transition nodes are otherwise
+     * never created or destroyed here — they live only in the flow.
+     */
+    syncSlideNodes(): void {
+        const slideIds = new SvelteSet(
+            this.content.slides.map((slide) => slide.id),
+        );
+        const removed = new SvelteSet<string>();
+
+        for (const node of this.flow.nodes) {
+            if (
+                node.type === 'slide' &&
+                (!node.data.slideId || !slideIds.has(node.data.slideId))
+            ) {
+                removed.add(node.id);
+                let cursor = this.chainTargetId(node.id);
+
+                while (cursor && !removed.has(cursor)) {
+                    removed.add(cursor);
+                    cursor = this.chainTargetId(cursor);
+                }
+            }
+        }
+
+        if (removed.size > 0) {
+            this.flow.nodes = this.flow.nodes.filter(
+                (node) => !removed.has(node.id),
+            );
+            this.flow.edges = this.flow.edges.filter(
+                (edge) =>
+                    !removed.has(edge.source) && !removed.has(edge.target),
+            );
+        }
+
+        const represented = new SvelteSet(
+            this.flow.nodes
+                .filter((node) => node.type === 'slide')
+                .map((node) => node.data.slideId),
+        );
+        let nextY =
+            Math.max(0, ...this.flow.nodes.map((node) => node.position.y)) +
+            160;
+
+        for (const slide of this.content.slides) {
+            if (!represented.has(slide.id)) {
+                this.flow.nodes.push({
+                    id: `node-${slide.id}`,
+                    type: 'slide',
+                    position: { x: 0, y: nextY },
+                    data: { slideId: slide.id },
+                });
+                nextY += 160;
+            }
+        }
+    }
+
+    addSlideNodeAt(position: NodePosition): void {
+        this.addSlide();
+        const slide = this.content.slides[this.content.slides.length - 1];
+        const node = this.flow.nodes.find(
+            (candidate) => candidate.data.slideId === slide.id,
+        );
+
+        if (node) {
+            node.position = { ...position };
+        }
+    }
+
+    addTransitionNode(position: NodePosition): void {
+        this.flow.nodes.push({
+            id: `node-${crypto.randomUUID()}`,
+            type: 'transition',
+            position: { ...position },
+            data: { label: null },
+        });
+        this.dirty = true;
+    }
+
+    removeFlowNode(nodeId: string): void {
+        const node = this.findFlowNode(nodeId);
+
+        if (!node) {
+            return;
+        }
+
+        if (node.type === 'slide') {
+            const index = this.content.slides.findIndex(
+                (slide) => slide.id === node.data.slideId,
+            );
+
+            if (index !== -1) {
+                // Delegates to removeSlide, which honors the last-slide
+                // guard and re-syncs nodes (removing the chain too).
+                this.removeSlide(index);
+            }
+
+            return;
+        }
+
+        this.flow.nodes = this.flow.nodes.filter(
+            (candidate) => candidate.id !== nodeId,
+        );
+        this.flow.edges = this.flow.edges.filter(
+            (edge) => edge.source !== nodeId && edge.target !== nodeId,
+        );
+        this.dirty = true;
+    }
+
+    /**
+     * Two-lane rules: a slide may have one navigation edge (to a slide) and
+     * one chain-start edge (to a transition); a transition may have one
+     * outgoing edge, to a transition only; a transition accepts one incoming
+     * edge. Returns false when the connection would break an invariant.
+     */
+    connect(sourceId: string, targetId: string): boolean {
+        const source = this.findFlowNode(sourceId);
+        const target = this.findFlowNode(targetId);
+
+        if (!source || !target || sourceId === targetId) {
+            return false;
+        }
+
+        if (source.type === 'transition' && target.type === 'slide') {
+            return false;
+        }
+
+        if (
+            target.type === 'transition' &&
+            this.flow.edges.some((edge) => edge.target === targetId)
+        ) {
+            return false;
+        }
+
+        const sameLane = this.flow.edges.some(
+            (edge) =>
+                edge.source === sourceId &&
+                this.findFlowNode(edge.target)?.type === target.type,
+        );
+
+        if (sameLane) {
+            return false;
+        }
+
+        this.flow.edges.push({
+            id: `edge-${crypto.randomUUID()}`,
+            source: sourceId,
+            target: targetId,
+            label: null,
+        });
+        this.dirty = true;
+
+        return true;
+    }
+
+    removeEdge(edgeId: string): void {
+        const before = this.flow.edges.length;
+        this.flow.edges = this.flow.edges.filter((edge) => edge.id !== edgeId);
+
+        if (this.flow.edges.length !== before) {
+            this.dirty = true;
+        }
+    }
+
+    moveNode(nodeId: string, position: NodePosition): void {
+        const node = this.findFlowNode(nodeId);
+
+        if (node) {
+            node.position = { ...position };
+            this.dirty = true;
+        }
+    }
+
+    setTransitionLabel(nodeId: string, label: string | null): void {
+        const node = this.findFlowNode(nodeId);
+
+        if (node && node.type === 'transition' && node.data.label !== label) {
+            node.data.label = label;
+            this.dirty = true;
+        }
+    }
+
+    slideForNode(nodeId: string): MutableSlide | null {
+        const node = this.findFlowNode(nodeId);
+
+        if (!node || node.type !== 'slide') {
+            return null;
+        }
+
+        return (
+            this.content.slides.find(
+                (slide) => slide.id === node.data.slideId,
+            ) ?? null
+        );
+    }
+
+    private findFlowNode(nodeId: string): MutableFlowNode | null {
+        return (
+            this.flow.nodes.find((candidate) => candidate.id === nodeId) ?? null
+        );
+    }
+
+    private chainTargetId(sourceId: string): string | null {
+        const edge = this.flow.edges.find(
+            (candidate) =>
+                candidate.source === sourceId &&
+                this.findFlowNode(candidate.target)?.type === 'transition',
+        );
+
+        return edge?.target ?? null;
     }
 
     selectSlide(index: number): void {
@@ -99,7 +328,6 @@ export class EditorState {
         slide.slots = remapped;
 
         if (layout === 'custom-grid' && slide.config === null) {
-            // eslint-disable-next-line @typescript-eslint/no-explicit-any
             slide.config = { rows: 3, cols: 3 } as any;
         }
 
@@ -118,8 +346,10 @@ export class EditorState {
     }
 
     updateSlideConfig(config: Record<string, unknown>): void {
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        this.selectedSlide.config = { ...(this.selectedSlide.config ?? {}), ...config } as any;
+        this.selectedSlide.config = {
+            ...(this.selectedSlide.config ?? {}),
+            ...config,
+        } as any;
         this.dirty = true;
     }
 
@@ -153,6 +383,7 @@ export class EditorState {
         const block = this.addBlock(slot, type);
         block.style.gridColumn = gridColumn;
         block.style.gridRow = gridRow;
+
         if (type === 'code') {
             block.lang = 'typescript';
         }
@@ -202,6 +433,7 @@ export class EditorState {
                     }
 
                     this.dirty = true;
+
                     return;
                 }
             }
@@ -253,13 +485,16 @@ export class EditorState {
         slide.slots[slot] = [...(slide.slots[slot] ?? []), block];
         this.selectedBlockId = block.id;
         this.dirty = true;
+
         return block;
     }
 
     private findBlock(blockId: string): MutableBlock | null {
         for (const slide of this.content.slides) {
             for (const blocks of Object.values(slide.slots)) {
-                const block = blocks.find((candidate) => candidate.id === blockId);
+                const block = blocks.find(
+                    (candidate) => candidate.id === blockId,
+                );
 
                 if (block) {
                     return block;

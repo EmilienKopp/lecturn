@@ -4,7 +4,9 @@ namespace App\Http\Controllers\Presentations;
 
 use App\Application\Actions\Presentations\UpdatePresentation;
 use App\Application\Commands\UpdatePresentationCommand;
+use App\Domain\Presentation\Exceptions\InvalidFlowGraph;
 use App\Domain\Presentation\Exceptions\InvalidPresentationContent;
+use App\Domain\Presentation\ValueObjects\FlowGraph;
 use App\Domain\Presentation\ValueObjects\PresentationContent;
 use App\Domain\Presentation\ValueObjects\TalkSettings;
 use App\Http\Controllers\Controller;
@@ -35,18 +37,32 @@ class UpdatePresentationController extends Controller
             throw ValidationException::withMessages(['content' => $exception->getMessage()]);
         }
 
+        try {
+            $flow = $request->has('flow')
+                ? FlowGraph::fromArray($request->validated('flow'))
+                : null;
+        } catch (InvalidFlowGraph $exception) {
+            throw ValidationException::withMessages(['flow' => $exception->getMessage()]);
+        }
+
         $talkSettings = $request->has('talk_settings')
             ? TalkSettings::fromArray($request->validated('talk_settings'))
             : null;
 
-        $this->updatePresentation->execute(
-            new UpdatePresentationCommand(
-                presentation_id: $presentation->id,
-                name: $request->validated('name', null),
-                content: $content,
-                talkSettings: $talkSettings,
-            ),
-        );
+        try {
+            $this->updatePresentation->execute(
+                new UpdatePresentationCommand(
+                    presentation_id: $presentation->id,
+                    name: $request->validated('name', null),
+                    content: $content,
+                    talkSettings: $talkSettings,
+                    flow: $flow,
+                ),
+            );
+        } catch (InvalidFlowGraph $exception) {
+            // replaceFlow() cross-checks slide references against the content.
+            throw ValidationException::withMessages(['flow' => $exception->getMessage()]);
+        }
 
         Inertia::flash('toast', ['type' => 'success', 'message' => __('Presentation saved.')]);
 

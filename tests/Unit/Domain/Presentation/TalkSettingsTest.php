@@ -41,7 +41,7 @@ it('serialises to array', function () {
 });
 
 it('roundtrips through fromArray and toArray', function () {
-    $original = ['showReactions' => false, 'timerMode' => 'elapsed', 'durationMinutes' => null];
+    $original = ['showReactions' => false, 'showDock' => true, 'timerMode' => 'elapsed', 'durationMinutes' => null];
 
     expect(TalkSettings::fromArray($original)->toArray())->toEqual($original);
 });

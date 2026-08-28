@@ -23,7 +23,8 @@
                     id="block-lang"
                     class="w-full rounded-md border bg-background px-2 py-1.5 text-sm"
                     value={block.lang ?? 'typescript'}
-                    onchange={(e) => editor.updateBlockLang(block.id, e.currentTarget.value)}
+                    onchange={(e) =>
+                        editor.updateBlockLang(block.id, e.currentTarget.value)}
                     data-test="inspector-lang"
                 >
                     {#each SUPPORTED_LANGUAGES as lang (lang)}
@@ -54,7 +55,9 @@
             </div>
 
             <div class="space-y-1">
-                <Label for="block-font-weight" class="text-xs">Font weight</Label>
+                <Label for="block-font-weight" class="text-xs"
+                    >Font weight</Label
+                >
                 <select
                     id="block-font-weight"
                     class="w-full rounded-md border bg-background px-2 py-1.5 text-sm"
@@ -90,7 +93,9 @@
 
         {#if block.type === 'box'}
             <div class="space-y-1">
-                <Label for="block-border-color" class="text-xs">Border color</Label>
+                <Label for="block-border-color" class="text-xs"
+                    >Border color</Label
+                >
                 <input
                     id="block-border-color"
                     type="color"

@@ -36,6 +36,8 @@ export async function highlight(
     theme: BundledTheme = 'github-dark',
 ): Promise<string> {
     const hl = await getHighlighter();
-    const safeLang = SUPPORTED_LANGUAGES.includes(lang as BundledLanguage) ? lang : 'typescript';
+    const safeLang = SUPPORTED_LANGUAGES.includes(lang as BundledLanguage)
+        ? lang
+        : 'typescript';
     return hl.codeToHtml(code, { lang: safeLang, theme });
 }

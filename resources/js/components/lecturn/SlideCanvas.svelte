@@ -19,11 +19,15 @@
 
 <!-- svelte-ignore a11y_no_static_element_interactions, a11y_click_events_have_key_events -->
 <div
-    class="flex flex-1 items-center justify-center bg-muted/40 p-8 {isRichText ? 'overflow-visible' : 'overflow-hidden'}"
+    class="flex flex-1 items-center justify-center bg-muted/40 p-8 {isRichText
+        ? 'overflow-visible'
+        : 'overflow-hidden'}"
     onclick={() => (editor.selectedBlockId = null)}
 >
     <div
-        class="stage-canvas aspect-video w-full max-w-5xl rounded-md {isRichText ? 'overflow-visible' : ''}"
+        class="stage-canvas aspect-video w-full max-w-5xl rounded-md {isRichText
+            ? 'overflow-visible'
+            : ''}"
         style="background: {slide.background ?? '#ffffff'}; color: #1a1a1a"
         data-test="slide-canvas"
     >
@@ -40,7 +44,10 @@
                         <button
                             type="button"
                             class="text-sm opacity-60 hover:opacity-100"
-                            onclick={(e) => { e.stopPropagation(); editor.addRichtextBlock('main'); }}
+                            onclick={(e) => {
+                                e.stopPropagation();
+                                editor.addRichtextBlock('main');
+                            }}
                         >
                             + Initialize editor
                         </button>

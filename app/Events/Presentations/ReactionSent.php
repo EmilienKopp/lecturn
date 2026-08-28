@@ -5,11 +5,11 @@ declare(strict_types=1);
 namespace App\Events\Presentations;
 
 use Illuminate\Broadcasting\Channel;
-use Illuminate\Contracts\Broadcasting\ShouldBroadcast;
+use Illuminate\Contracts\Broadcasting\ShouldBroadcastNow;
 use Illuminate\Foundation\Events\Dispatchable;
 use Illuminate\Queue\SerializesModels;
 
-class ReactionSent implements ShouldBroadcast
+class ReactionSent implements ShouldBroadcastNow
 {
     use Dispatchable, SerializesModels;
 
@@ -24,6 +24,11 @@ class ReactionSent implements ShouldBroadcast
         return [
             new Channel("presentation.{$this->embedToken}"),
         ];
+    }
+
+    public function broadcastAs(): string
+    {
+        return 'reaction.sent';
     }
 
     /** @return array<string, string> */

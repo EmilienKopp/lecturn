@@ -54,4 +54,11 @@
     .float-emoji {
         animation: float-up 3s ease-out forwards;
     }
+
+    @media (prefers-reduced-motion: reduce) {
+        .float-emoji {
+            animation: none;
+            opacity: 0;
+        }
+    }
 </style>

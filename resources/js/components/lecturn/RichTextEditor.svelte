@@ -12,10 +12,7 @@
     import type { EditorState } from '@/lib/lecturn/editor-state.svelte';
     import type { Block } from '@/types/generated';
 
-    let {
-        editor,
-        block,
-    }: { editor: EditorState; block: Block } = $props();
+    let { editor, block }: { editor: EditorState; block: Block } = $props();
 
     let holderEl = $state<HTMLDivElement | null>(null);
 
@@ -58,9 +55,7 @@
         });
 
         return () => {
-            instance.isReady
-                .then(() => instance.destroy())
-                .catch(() => {});
+            instance.isReady.then(() => instance.destroy()).catch(() => {});
         };
     });
 </script>
@@ -104,11 +99,26 @@
         opacity: 1;
     }
 
-    .editorjs-holder :global(h1.ce-header) { font-size: 2rem; font-weight: 700; }
-    .editorjs-holder :global(h2.ce-header) { font-size: 1.5rem; font-weight: 600; }
-    .editorjs-holder :global(h3.ce-header) { font-size: 1.25rem; font-weight: 600; }
-    .editorjs-holder :global(h4.ce-header) { font-size: 1rem; font-weight: 600; }
-    .editorjs-holder :global(.cdx-quote) { border-left: 3px solid currentColor; padding-left: 1rem; }
+    .editorjs-holder :global(h1.ce-header) {
+        font-size: 2rem;
+        font-weight: 700;
+    }
+    .editorjs-holder :global(h2.ce-header) {
+        font-size: 1.5rem;
+        font-weight: 600;
+    }
+    .editorjs-holder :global(h3.ce-header) {
+        font-size: 1.25rem;
+        font-weight: 600;
+    }
+    .editorjs-holder :global(h4.ce-header) {
+        font-size: 1rem;
+        font-weight: 600;
+    }
+    .editorjs-holder :global(.cdx-quote) {
+        border-left: 3px solid currentColor;
+        padding-left: 1rem;
+    }
     .editorjs-holder :global(.ce-code__textarea) {
         font-family: monospace;
         font-size: 0.875rem;

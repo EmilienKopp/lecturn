@@ -72,6 +72,9 @@ test('the editor page renders with the presentation content', function () {
         ->where('presentation.id', $presentation->id)
         ->where('presentation.name', $presentation->name)
         ->has('presentation.content.slides', 2)
+        ->where('presentation.talk_settings.showReactions', false)
+        ->where('presentation.talk_settings.showDock', true)
+        ->where('presentation.talk_settings.timerMode', 'elapsed')
         ->where('embed.url', route('presentations.embed', ['presentation' => $presentation->embed_token]))
         ->where('embed.tag', 'lecturn-deck-'.strtolower(substr($presentation->embed_token, 0, 8))),
     );
@@ -198,7 +201,10 @@ test('the present page renders with the presentation content, talk settings and 
         ->component('presentations/Present')
         ->where('presentation.id', $presentation->id)
         ->has('presentation.content.slides', 2)
-        ->has('presentation.talk_settings')
+        ->where('presentation.talk_settings.showReactions', false)
+        ->where('presentation.talk_settings.showDock', true)
+        ->where('presentation.talk_settings.timerMode', 'elapsed')
+        ->where('presentation.talk_settings.durationMinutes', null)
         ->has('viewerUrl'),
     );
 });

@@ -7,10 +7,8 @@
     import BoxBlockView from '@/components/lecturn/BoxBlockView.svelte';
     import type { EditorState } from '@/lib/lecturn/editor-state.svelte';
 
-    let {
-        editor,
-        slot: slotName,
-    }: { editor: EditorState; slot: string } = $props();
+    let { editor, slot: slotName }: { editor: EditorState; slot: string } =
+        $props();
 
     const blocks = $derived(editor.selectedSlide.slots[slotName] ?? []);
 </script>

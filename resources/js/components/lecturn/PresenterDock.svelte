@@ -2,17 +2,19 @@
     import type { TalkSettings } from '@/types/generated';
 
     let {
-        embedToken,
         viewerUrl,
         talkSettings,
         slideCount = 0,
         currentSlide = 0,
+        recentReactions = [],
+        showReactions = $bindable(false),
     }: {
-        embedToken: string;
         viewerUrl: string;
         talkSettings: TalkSettings;
         slideCount?: number;
         currentSlide?: number;
+        recentReactions?: { id: number; emoji: string }[];
+        showReactions?: boolean;
     } = $props();
 
     // --- Timer ---
@@ -34,6 +36,7 @@
         const h = Math.floor(seconds / 3600);
         const m = Math.floor((seconds % 3600) / 60);
         const s = seconds % 60;
+
         if (h > 0) {
             return `${h}:${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`;
         }
@@ -43,7 +46,12 @@
 
     const displayTime = $derived(
         talkSettings.timerMode === 'countdown' && talkSettings.durationMinutes
-            ? formatTime(Math.max(0, talkSettings.durationMinutes * 60 - elapsedSeconds))
+            ? formatTime(
+                  Math.max(
+                      0,
+                      talkSettings.durationMinutes * 60 - elapsedSeconds,
+                  ),
+              )
             : formatTime(elapsedSeconds),
     );
 
@@ -58,9 +66,6 @@
     const qrUrl = $derived(
         `https://api.qrserver.com/v1/create-qr-code/?size=180x180&margin=4&data=${encodeURIComponent(viewerUrl)}`,
     );
-
-    // --- Recent reactions ---
-    let recentReactions = $state<{ id: number; emoji: string }[]>([]);
 </script>
 
 <aside
@@ -69,11 +74,15 @@
 >
     <!-- Timer -->
     <section class="rounded-lg bg-zinc-800 p-4">
-        <p class="mb-1 text-xs font-semibold uppercase tracking-wider text-zinc-400">
+        <p
+            class="mb-1 text-xs font-semibold uppercase tracking-wider text-zinc-400"
+        >
             {talkSettings.timerMode === 'countdown' ? 'Time left' : 'Elapsed'}
         </p>
         <p
-            class="font-mono text-4xl font-bold tabular-nums {isOverTime ? 'text-red-400' : 'text-white'}"
+            class="font-mono text-4xl font-bold tabular-nums {isOverTime
+                ? 'text-red-400'
+                : 'text-white'}"
         >
             {displayTime}
         </p>
@@ -90,24 +99,43 @@
             Scan to react
         </p>
         <div class="flex justify-center">
-            <img src={qrUrl} alt="QR code for {viewerUrl}" width="180" height="180" />
+            <img
+                src={qrUrl}
+                alt="QR code for {viewerUrl}"
+                width="180"
+                height="180"
+            />
         </div>
         <p class="mt-2 truncate text-center text-[10px] text-zinc-400">
             {viewerUrl}
         </p>
     </section>
 
-    <!-- Recent reactions -->
-    {#if recentReactions.length > 0}
-        <section class="rounded-lg bg-zinc-800 p-4">
-            <p class="mb-2 text-xs font-semibold uppercase tracking-wider text-zinc-400">
+    <!-- Reactions -->
+    <section class="rounded-lg bg-zinc-800 p-4">
+        <div class="flex items-center justify-between">
+            <p
+                class="text-xs font-semibold uppercase tracking-wider text-zinc-400"
+            >
                 Reactions
             </p>
-            <div class="flex flex-wrap gap-1">
-                {#each recentReactions.slice(-20) as reaction (reaction.id)}
-                    <span class="text-xl">{reaction.emoji}</span>
-                {/each}
-            </div>
-        </section>
-    {/if}
+            <button
+                type="button"
+                role="switch"
+                aria-checked={showReactions}
+                aria-label="Show audience reactions on screen"
+                class="relative h-5 w-9 rounded-full transition-colors {showReactions
+                    ? 'bg-amber-500'
+                    : 'bg-zinc-600'}"
+                onclick={() => (showReactions = !showReactions)}
+                data-test="dock-reactions-toggle"
+            >
+                <span
+                    class="absolute top-0.5 left-0.5 h-4 w-4 rounded-full bg-white transition-transform {showReactions
+                        ? 'translate-x-4'
+                        : ''}"
+                ></span>
+            </button>
+        </div>
+    </section>
 </aside>

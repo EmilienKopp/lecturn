@@ -4,9 +4,7 @@
     import TextBlockView from '@/components/lecturn/TextBlockView.svelte';
     import type { EditorState } from '@/lib/lecturn/editor-state.svelte';
 
-    let {
-        editor,
-    }: { editor: EditorState } = $props();
+    let { editor }: { editor: EditorState } = $props();
 
     const slide = $derived(editor.selectedSlide);
     const rows = $derived((slide.config?.rows as number | undefined) ?? 3);
@@ -38,7 +36,9 @@
         const parts = val.split('/').map((s) => s.trim());
         const start = parseInt(parts[0], 10);
         const spanPart = parts[1] ?? '';
-        const span = spanPart.startsWith('span') ? parseInt(spanPart.replace('span', '').trim(), 10) : 1;
+        const span = spanPart.startsWith('span')
+            ? parseInt(spanPart.replace('span', '').trim(), 10)
+            : 1;
         return [start, span];
     }
 
@@ -84,7 +84,12 @@
         return cells.size === expected;
     }
 
-    function selectionBounds(): { minR: number; maxR: number; minC: number; maxC: number } {
+    function selectionBounds(): {
+        minR: number;
+        maxR: number;
+        minC: number;
+        maxC: number;
+    } {
         const parsed = [...selectedCells].map((k) => {
             const [r, c] = k.split(',').map(Number);
             return { r, c };
@@ -105,7 +110,7 @@
         const cellW = gridRect.width / cols;
         const cellH = gridRect.height / rows;
         popoverRect = {
-            top: (bounds.maxR) * cellH + 8,
+            top: bounds.maxR * cellH + 8,
             left: (bounds.maxC + 1) * cellW - 120,
         };
         popoverVisible = true;
@@ -146,8 +151,15 @@
         {@const occupied = isCellOccupied(r, c)}
         {@const selected = selectedCells.has(key)}
         <div
-            class="rounded transition-colors {occupied ? 'pointer-events-none opacity-0' : selected ? 'border-2 border-primary bg-primary/20' : 'border border-dashed border-muted-foreground/30 hover:border-muted-foreground/60 hover:bg-muted/30'}"
-            onclick={(e) => { e.stopPropagation(); toggleCell(e, r, c); }}
+            class="rounded transition-colors {occupied
+                ? 'pointer-events-none opacity-0'
+                : selected
+                  ? 'border-2 border-primary bg-primary/20'
+                  : 'border border-dashed border-muted-foreground/30 hover:border-muted-foreground/60 hover:bg-muted/30'}"
+            onclick={(e) => {
+                e.stopPropagation();
+                toggleCell(e, r, c);
+            }}
             style="grid-column: {c + 1}; grid-row: {r + 1};"
             data-test="grid-cell-{r}-{c}"
             title="Ctrl+click to select"
@@ -158,8 +170,12 @@
     {#each blocks as block (block.id)}
         <div
             class="overflow-hidden"
-            style="grid-column: {block.style.gridColumn ?? 'auto'}; grid-row: {block.style.gridRow ?? 'auto'};"
-            onclick={(e) => { e.stopPropagation(); editor.selectedBlockId = block.id; }}
+            style="grid-column: {block.style.gridColumn ??
+                'auto'}; grid-row: {block.style.gridRow ?? 'auto'};"
+            onclick={(e) => {
+                e.stopPropagation();
+                editor.selectedBlockId = block.id;
+            }}
         >
             {#if block.type === 'text'}
                 <TextBlockView {editor} {block} />
@@ -181,18 +197,18 @@
             <button
                 type="button"
                 class="rounded px-2 py-1 text-xs hover:bg-accent"
-                onclick={() => createBlock('text')}
-            >Text</button>
+                onclick={() => createBlock('text')}>Text</button
+            >
             <button
                 type="button"
                 class="rounded px-2 py-1 text-xs hover:bg-accent"
-                onclick={() => createBlock('code')}
-            >Code</button>
+                onclick={() => createBlock('code')}>Code</button
+            >
             <button
                 type="button"
                 class="rounded px-2 py-1 font-mono text-xs hover:bg-accent"
-                onclick={() => createBlock('box')}
-            >Box</button>
+                onclick={() => createBlock('box')}>Box</button
+            >
         </div>
     {/if}
 </div>
