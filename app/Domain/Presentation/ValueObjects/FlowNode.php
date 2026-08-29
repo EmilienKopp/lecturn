@@ -9,9 +9,11 @@ use App\Domain\Presentation\Exceptions\InvalidFlowGraph;
 readonly class FlowNode
 {
     /**
-     * @param  array{slideId?: string, label?: string|null}  $data  Slide nodes
-     *                                                              carry `slideId`; transition nodes carry an optional `label` and,
-     *                                                              once assigned, the `slideId` of the slide that owns the step.
+     * @param  array{slideId?: string, label?: string|null, blockId?: string, actionId?: string}  $data  Slide nodes
+     *                                                                                                   carry `slideId`; transition nodes carry an optional `label` and,
+     *                                                                                                   once assigned, the `slideId` of the slide that owns the step.
+     *                                                                                                   Code-action nodes reference the code block and action they order
+     *                                                                                                   (`blockId` + `actionId`), plus an optional `label` and `slideId`.
      */
     public function __construct(
         public string $id,
@@ -31,19 +33,29 @@ readonly class FlowNode
             }
         }
 
-        if ($this->type === FlowNodeType::Transition) {
+        if ($this->type === FlowNodeType::Transition || $this->type === FlowNodeType::CodeAction) {
             $label = $this->data['label'] ?? null;
 
             if ($label !== null && ! is_string($label)) {
-                throw new InvalidFlowGraph("Transition node \"{$this->id}\" label must be a string or null.");
+                throw new InvalidFlowGraph("Node \"{$this->id}\" label must be a string or null.");
             }
 
-            // A transition node belongs to a slide through a stable slideId,
-            // not through edges — so a step keeps its identity when unwired.
+            // A step node belongs to a slide through a stable slideId, not
+            // through edges — so a step keeps its identity when unwired.
             $slideId = $this->data['slideId'] ?? null;
 
             if ($slideId !== null && (! is_string($slideId) || $slideId === '')) {
-                throw new InvalidFlowGraph("Transition node \"{$this->id}\" slideId must be a non-empty string.");
+                throw new InvalidFlowGraph("Node \"{$this->id}\" slideId must be a non-empty string.");
+            }
+        }
+
+        if ($this->type === FlowNodeType::CodeAction) {
+            foreach (['blockId', 'actionId'] as $key) {
+                $value = $this->data[$key] ?? null;
+
+                if (! is_string($value) || $value === '') {
+                    throw new InvalidFlowGraph("Code-action node \"{$this->id}\" requires a non-empty {$key}.");
+                }
             }
         }
     }

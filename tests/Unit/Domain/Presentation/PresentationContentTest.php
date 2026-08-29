@@ -131,6 +131,62 @@ it('rejects a transition pin with neither nodeId nor order', function () {
     PresentationContent::fromArray($data);
 })->throws(InvalidPresentationContent::class, 'requires a nodeId or a legacy order');
 
+it('round-trips a code block with action pages', function () {
+    $data = validContentArray();
+    $data['slides'][0]['slots']['right'][0]['actions'] = [
+        ['id' => 'action-1', 'code' => "echo 'v2';", 'highlightLines' => '1,3-5', 'label' => 'add echo'],
+        ['id' => 'action-2', 'code' => "echo 'v3';"],
+    ];
+
+    $content = PresentationContent::fromArray($data);
+
+    expect($content->toArray())->toEqual($data);
+});
+
+it('omits the actions key when a block has none', function () {
+    $json = json_encode(PresentationContent::fromArray(validContentArray())->toArray());
+
+    expect($json)->not->toContain('"actions"');
+});
+
+it('rejects code actions on a non-code block', function () {
+    $data = validContentArray();
+    $data['slides'][0]['slots']['left'][0]['actions'] = [
+        ['id' => 'action-1', 'code' => 'nope'],
+    ];
+
+    PresentationContent::fromArray($data);
+})->throws(InvalidPresentationContent::class, 'not a code block');
+
+it('rejects duplicate code action ids on a block', function () {
+    $data = validContentArray();
+    $data['slides'][0]['slots']['right'][0]['actions'] = [
+        ['id' => 'action-1', 'code' => 'a'],
+        ['id' => 'action-1', 'code' => 'b'],
+    ];
+
+    PresentationContent::fromArray($data);
+})->throws(InvalidPresentationContent::class, 'Duplicate code action id');
+
+it('accepts every highlight lines shape the DSL allows', function (string $spec) {
+    $data = validContentArray();
+    $data['slides'][0]['slots']['right'][0]['actions'] = [
+        ['id' => 'action-1', 'code' => 'x', 'highlightLines' => $spec],
+    ];
+
+    expect(PresentationContent::fromArray($data))->toBeInstanceOf(PresentationContent::class);
+})->with(['3', '3,5', '3-5', '3,5-8,12', '*']);
+
+it('rejects a malformed highlight lines spec', function (string $spec) {
+    $data = validContentArray();
+    $data['slides'][0]['slots']['right'][0]['actions'] = [
+        ['id' => 'action-1', 'code' => 'x', 'highlightLines' => $spec],
+    ];
+
+    PresentationContent::fromArray($data);
+})->with(['abc', '3;5', '3-', '-5', '3,', '**'])
+    ->throws(InvalidPresentationContent::class, 'highlight lines');
+
 it('round-trips a deck-wide background image url', function () {
     $data = validContentArray();
     $data['backgroundImage'] = 'https://cdn.example.com/bg.jpg';

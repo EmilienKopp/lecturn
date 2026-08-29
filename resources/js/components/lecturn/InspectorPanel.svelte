@@ -2,6 +2,7 @@
     import { page } from '@inertiajs/svelte';
     import Eye from 'lucide-svelte/icons/eye';
     import EyeOff from 'lucide-svelte/icons/eye-off';
+    import SquarePen from 'lucide-svelte/icons/square-pen';
     import Trash2 from 'lucide-svelte/icons/trash-2';
     import { toast } from 'svelte-sonner';
     import DeletePresentationBackgroundController from '@/actions/App/Http/Controllers/Presentations/DeletePresentationBackgroundController';
@@ -16,7 +17,12 @@
     let {
         editor,
         presentationId,
-    }: { editor: EditorState; presentationId: number } = $props();
+        onEditCodeSequence,
+    }: {
+        editor: EditorState;
+        presentationId: number;
+        onEditCodeSequence: (blockId: string) => void;
+    } = $props();
 
     let uploadingBackground = $state(false);
 
@@ -174,6 +180,26 @@
                         <option value={lang}>{lang}</option>
                     {/each}
                 </select>
+            </div>
+
+            <div class="space-y-1">
+                <Label class="text-xs">Code sequence</Label>
+                <Button
+                    variant="outline"
+                    size="sm"
+                    class="w-full"
+                    onclick={() => onEditCodeSequence(block.id)}
+                    data-test="inspector-edit-sequence"
+                >
+                    <SquarePen class="h-4 w-4" />
+                    {(block.actions ?? []).length > 0
+                        ? `Edit sequence (${(block.actions ?? []).length})`
+                        : 'Add sequence'}
+                </Button>
+                <p class="text-[11px] text-muted-foreground">
+                    Morph this code through pages during the talk, with optional
+                    line highlights.
+                </p>
             </div>
         {/if}
 

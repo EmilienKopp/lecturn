@@ -2,6 +2,7 @@
     import { page } from '@inertiajs/svelte';
     import { toast } from 'svelte-sonner';
     import AppHead from '@/components/AppHead.svelte';
+    import CodeSequenceModal from '@/components/lecturn/CodeSequenceModal.svelte';
     import EditorToolbar from '@/components/lecturn/EditorToolbar.svelte';
     import FlowCanvas from '@/components/lecturn/flow/FlowCanvas.svelte';
     import InspectorPanel from '@/components/lecturn/InspectorPanel.svelte';
@@ -46,6 +47,7 @@
     const editor = new EditorState(presentation.content, presentation.flow);
     let name = $state(presentation.name);
     let view = $state<'slides' | 'flow'>('slides');
+    let codeSequenceBlockId = $state<string | null>(null);
 
     const openSlide = (slideIndex: number) => {
         if (slideIndex !== -1) {
@@ -110,13 +112,29 @@
 
     {#if view === 'flow'}
         <div class="min-h-0 flex-1">
-            <FlowCanvas {editor} onOpenSlide={openSlide} />
+            <FlowCanvas
+                {editor}
+                onOpenSlide={openSlide}
+                onEditCodeSequence={(blockId) =>
+                    (codeSequenceBlockId = blockId)}
+            />
         </div>
     {:else}
         <div class="flex min-h-0 flex-1">
             <SlideNavigator {editor} />
             <SlideCanvas {editor} presentationId={presentation.id} />
-            <InspectorPanel {editor} presentationId={presentation.id} />
+            <InspectorPanel
+                {editor}
+                presentationId={presentation.id}
+                onEditCodeSequence={(blockId) =>
+                    (codeSequenceBlockId = blockId)}
+            />
         </div>
     {/if}
 </div>
+
+<CodeSequenceModal
+    {editor}
+    blockId={codeSequenceBlockId}
+    onClose={() => (codeSequenceBlockId = null)}
+/>

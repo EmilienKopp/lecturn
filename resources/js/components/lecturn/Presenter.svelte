@@ -1,7 +1,14 @@
 <script lang="ts">
-    import { Code, Presentation, Slide, Transition } from '@animotion/core';
+    import {
+        Action,
+        Code,
+        Presentation,
+        Slide,
+        Transition,
+    } from '@animotion/core';
     import '@animotion/core/theme';
     import {
+        codeActionCues,
         compileFlow,
         defaultFlowFromContent,
         enabledSlideIds,
@@ -40,9 +47,28 @@
         );
     });
     const content = $derived(compiled.content);
-    const stepsBySlideId = $derived(
-        stepIndexBySlide(compileFlow(compiled.flow, content)),
+    const deck = $derived(compileFlow(compiled.flow, content));
+    const stepsBySlideId = $derived(stepIndexBySlide(deck));
+    // Code-action cues per slide: do/undo page pairs resolved by the same
+    // compiler the codegen uses, so live playback matches the export.
+    const cuesBySlideId = $derived(
+        new Map(
+            deck.slides.map((compiledSlide) => [
+                compiledSlide.slide.id,
+                codeActionCues(compiledSlide.slide, compiledSlide.steps),
+            ]),
+        ),
     );
+
+    // Instances of the Animotion Code components, keyed by block id, so
+    // Action fragments can morph them. Plain object on purpose — refs are
+    // imperative handles, not render state.
+    const codeRefs: Record<string, ReturnType<typeof Code> | undefined> = {};
+
+    const cuesFor = (slide: SlideData, blockId: string) =>
+        (cuesBySlideId.get(slide.id) ?? []).filter(
+            (cue) => cue.blockId === blockId,
+        );
     // Disabled slides never reach the audience, mirroring the exported deck.
     const shownSlides = $derived(
         (() => {
@@ -104,10 +130,17 @@
         <div
             class="[&_pre]:m-0 [&_pre]:overflow-auto [&_pre]:rounded-lg [&_pre]:bg-[#24292e] [&_pre]:p-4 [&_pre]:text-[1.4cqw]! [&_pre]:leading-relaxed"
         >
+            <!-- autoIndent={false}: Animotion's indent() dedents by the
+                 smallest indent among *indented* lines, ignoring zero-indent
+                 ones, so top-level snippets lose their first indent level on
+                 every render/update. Our code is stored verbatim; render it
+                 verbatim. -->
             <Code
+                bind:this={codeRefs[block.id]}
                 code={block.content}
                 lang={block.lang ?? 'text'}
                 theme="github-dark"
+                autoIndent={false}
             />
         </div>
     {:else if block.type === 'image'}
@@ -117,6 +150,30 @@
             class="max-h-full max-w-full object-contain"
         />
     {/if}
+{/snippet}
+
+{#snippet blockActions(slide: SlideData, block: Block)}
+    {#each cuesFor(slide, block.id) as cue (cue.order)}
+        <Action
+            order={cue.order}
+            do={async () => {
+                const ref = codeRefs[block.id];
+
+                if (ref) {
+                    await ref.update`${cue.show.code}`;
+                    void ref.selectLines`${cue.show.highlightLines ?? '*'}`;
+                }
+            }}
+            undo={async () => {
+                const ref = codeRefs[block.id];
+
+                if (ref) {
+                    await ref.update`${cue.back.code}`;
+                    void ref.selectLines`${cue.back.highlightLines ?? '*'}`;
+                }
+            }}
+        />
+    {/each}
 {/snippet}
 
 <div class="h-full w-full" data-test="presenter">
@@ -154,9 +211,11 @@
                                     {#if order !== null}
                                         <Transition {order}>
                                             {@render blockView(block)}
+                                            {@render blockActions(slide, block)}
                                         </Transition>
                                     {:else}
                                         {@render blockView(block)}
+                                        {@render blockActions(slide, block)}
                                     {/if}
                                 </div>
                             {/each}
@@ -176,11 +235,13 @@
                             <div class="flex min-h-0 flex-col gap-4">
                                 {#each staticBlocks as block (block.id)}
                                     {@render blockView(block)}
+                                    {@render blockActions(slide, block)}
                                 {/each}
                                 {#each stepGroups as group (group.order)}
                                     <Transition order={group.order}>
                                         {#each group.blocks as block (block.id)}
                                             {@render blockView(block)}
+                                            {@render blockActions(slide, block)}
                                         {/each}
                                     </Transition>
                                 {/each}

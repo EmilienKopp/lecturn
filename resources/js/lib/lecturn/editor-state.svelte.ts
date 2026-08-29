@@ -1,5 +1,6 @@
-import { SvelteSet } from 'svelte/reactivity';
+import { SvelteMap, SvelteSet } from 'svelte/reactivity';
 import {
+    codeActionsForBlock,
     defaultFlowFromContent,
     enabledSlideIds,
     migrateLegacyTransitions,
@@ -9,6 +10,7 @@ import { layoutDefinitions } from '@/lib/lecturn/layouts';
 import type {
     Block,
     BlockStyle,
+    CodeAction,
     FlowGraph,
     NodePosition,
     PresentationContent,
@@ -175,6 +177,7 @@ export class EditorState {
         }
 
         this.reconcilePins();
+        this.reconcileCodeActionNodes();
     }
 
     /**
@@ -205,6 +208,70 @@ export class EditorState {
                         this.dirty = true;
                     }
                 }
+            }
+        }
+    }
+
+    /**
+     * Code-action nodes and block action payloads are created and destroyed
+     * together (addCodeAction/removeCodeAction), but content and flow save
+     * separately, so a reload can surface a mismatch: a node whose block or
+     * action is gone is dropped; an action whose node is gone gets a fresh
+     * node appended to its block's chain.
+     */
+    private reconcileCodeActionNodes(): void {
+        const actionOwners = new SvelteMap<
+            string,
+            { slideId: string; blockId: string }
+        >();
+
+        for (const slide of this.content.slides) {
+            for (const blocks of Object.values(slide.slots)) {
+                for (const block of blocks) {
+                    for (const action of block.actions ?? []) {
+                        actionOwners.set(action.id, {
+                            slideId: slide.id,
+                            blockId: block.id,
+                        });
+                    }
+                }
+            }
+        }
+
+        const removed = new SvelteSet<string>();
+        const represented = new SvelteSet<string>();
+
+        for (const node of this.flow.nodes) {
+            if (node.type !== 'code-action') {
+                continue;
+            }
+
+            const owner = node.data.actionId
+                ? actionOwners.get(node.data.actionId)
+                : undefined;
+
+            if (!owner || owner.blockId !== node.data.blockId) {
+                removed.add(node.id);
+            } else if (node.data.actionId) {
+                represented.add(node.data.actionId);
+            }
+        }
+
+        if (removed.size > 0) {
+            this.flow.nodes = this.flow.nodes.filter(
+                (node) => !removed.has(node.id),
+            );
+            this.flow.edges = this.flow.edges.filter(
+                (edge) =>
+                    !removed.has(edge.source) && !removed.has(edge.target),
+            );
+            this.dirty = true;
+        }
+
+        for (const [actionId, owner] of actionOwners) {
+            if (!represented.has(actionId)) {
+                this.pushCodeActionNode(owner.slideId, owner.blockId, actionId);
+                this.dirty = true;
             }
         }
     }
@@ -252,6 +319,16 @@ export class EditorState {
             return;
         }
 
+        // Deleting a code-action node deletes the page itself — the node is
+        // the page's handle, so the payload must not silently linger.
+        if (node.type === 'code-action') {
+            if (node.data.blockId && node.data.actionId) {
+                this.removeCodeAction(node.data.blockId, node.data.actionId);
+            }
+
+            return;
+        }
+
         this.flow.nodes = this.flow.nodes.filter(
             (candidate) => candidate.id !== nodeId,
         );
@@ -280,8 +357,18 @@ export class EditorState {
             return false;
         }
 
+        // Code-action chains only order the pages of one code block, so both
+        // ends must be code-action nodes of the same block.
         if (
-            target.type === 'transition' &&
+            (source.type === 'code-action' || target.type === 'code-action') &&
+            (source.type !== target.type ||
+                source.data.blockId !== target.data.blockId)
+        ) {
+            return false;
+        }
+
+        if (
+            target.type !== 'slide' &&
             this.flow.edges.some((edge) => edge.target === targetId)
         ) {
             return false;
@@ -720,6 +807,271 @@ export class EditorState {
         return index === -1 ? 'Transition' : `Step ${index + 1}`;
     }
 
+    // ── Code actions ────────────────────────────────────────────────────
+
+    /**
+     * The block's action pages in play order (chain edges, canvas-position
+     * fallback), joined with their payloads. Nodes whose payload is gone are
+     * skipped; reconciliation removes them on the next sync.
+     */
+    codeActionsForBlock(
+        blockId: string,
+    ): { nodeId: string; action: Mutable<CodeAction>; index: number }[] {
+        const block = this.findBlock(blockId);
+
+        if (!block) {
+            return [];
+        }
+
+        const actionsById = new SvelteMap(
+            (block.actions ?? []).map((action) => [action.id, action]),
+        );
+        const pages: {
+            nodeId: string;
+            action: Mutable<CodeAction>;
+            index: number;
+        }[] = [];
+
+        for (const entry of codeActionsForBlock(this.flow, blockId)) {
+            const action = actionsById.get(entry.actionId);
+
+            if (action) {
+                pages.push({
+                    nodeId: entry.nodeId,
+                    action,
+                    index: pages.length,
+                });
+            }
+        }
+
+        return pages;
+    }
+
+    /**
+     * Appends a new page to the block's sequence: the payload lands on the
+     * block, its ordering node joins the flow chained after the last page
+     * (anchored under the block's pinned transition, or its slide node).
+     * Returns the new action id, or null when the block cannot hold pages.
+     */
+    addCodeAction(blockId: string): string | null {
+        const slide = this.slideContainingBlock(blockId);
+        const block = this.findBlock(blockId);
+
+        if (!slide || !block || block.type !== 'code') {
+            return null;
+        }
+
+        const lastPage = this.codeActionsForBlock(blockId).at(-1);
+        const action: Mutable<CodeAction> = {
+            id: `action-${crypto.randomUUID()}`,
+            code: lastPage?.action.code ?? block.content,
+            highlightLines: null,
+            label: null,
+        };
+
+        block.actions = [...(block.actions ?? []), action];
+        this.pushCodeActionNode(slide.id, blockId, action.id);
+        this.dirty = true;
+
+        return action.id;
+    }
+
+    updateCodeAction(
+        blockId: string,
+        actionId: string,
+        patch: Partial<Pick<CodeAction, 'code' | 'highlightLines' | 'label'>>,
+    ): void {
+        const block = this.findBlock(blockId);
+        const action = (block?.actions ?? []).find(
+            (candidate) => candidate.id === actionId,
+        );
+
+        if (!action) {
+            return;
+        }
+
+        for (const [key, value] of Object.entries(patch) as [
+            keyof typeof patch,
+            string | null,
+        ][]) {
+            if (action[key] !== value) {
+                action[key] = value as never;
+                this.dirty = true;
+            }
+        }
+    }
+
+    /** Removes a page and its node, bridging the chain around the gap. */
+    removeCodeAction(blockId: string, actionId: string): void {
+        const block = this.findBlock(blockId);
+        const index = (block?.actions ?? []).findIndex(
+            (candidate) => candidate.id === actionId,
+        );
+
+        if (block && index !== -1) {
+            block.actions.splice(index, 1);
+            this.dirty = true;
+        }
+
+        const node = this.flow.nodes.find(
+            (candidate) =>
+                candidate.type === 'code-action' &&
+                candidate.data.actionId === actionId,
+        );
+
+        if (!node) {
+            return;
+        }
+
+        const incoming = this.flow.edges.find(
+            (edge) => edge.target === node.id,
+        );
+        const outgoing = this.flow.edges.find(
+            (edge) => edge.source === node.id,
+        );
+
+        this.flow.nodes = this.flow.nodes.filter(
+            (candidate) => candidate.id !== node.id,
+        );
+        this.flow.edges = this.flow.edges.filter(
+            (edge) => edge.source !== node.id && edge.target !== node.id,
+        );
+
+        if (incoming && outgoing) {
+            this.flow.edges.push({
+                id: `edge-${crypto.randomUUID()}`,
+                source: incoming.source,
+                target: outgoing.target,
+                label: null,
+            });
+        }
+
+        this.dirty = true;
+    }
+
+    /** Swaps a page with its neighbor by rewiring (and repositioning) the chain. */
+    moveCodeAction(
+        blockId: string,
+        actionId: string,
+        direction: 'up' | 'down',
+    ): boolean {
+        const pages = this.codeActionsForBlock(blockId);
+        const index = pages.findIndex((page) => page.action.id === actionId);
+        const targetIndex = index + (direction === 'up' ? -1 : 1);
+
+        if (index === -1 || targetIndex < 0 || targetIndex >= pages.length) {
+            return false;
+        }
+
+        const ordered = pages.map((page) => page.nodeId);
+        [ordered[index], ordered[targetIndex]] = [
+            ordered[targetIndex],
+            ordered[index],
+        ];
+
+        // Swap canvas positions too, so the chart mirrors the new order even
+        // once an edge is removed (position is the unwired fallback order).
+        const a = this.findFlowNode(pages[index].nodeId);
+        const b = this.findFlowNode(pages[targetIndex].nodeId);
+
+        if (a && b) {
+            [a.position, b.position] = [b.position, a.position];
+        }
+
+        const owned = new SvelteSet(
+            this.flow.nodes
+                .filter(
+                    (node) =>
+                        node.type === 'code-action' &&
+                        node.data.blockId === blockId,
+                )
+                .map((node) => node.id),
+        );
+
+        this.flow.edges = this.flow.edges.filter(
+            (edge) => !(owned.has(edge.source) && owned.has(edge.target)),
+        );
+
+        for (let i = 0; i < ordered.length - 1; i++) {
+            this.flow.edges.push({
+                id: `edge-${crypto.randomUUID()}`,
+                source: ordered[i],
+                target: ordered[i + 1],
+                label: null,
+            });
+        }
+
+        this.dirty = true;
+
+        return true;
+    }
+
+    /** Fallback name for a code-action node in the flow view: "Page N". */
+    codeActionPlaceholder(nodeId: string): string {
+        const node = this.findFlowNode(nodeId);
+
+        if (!node || node.type !== 'code-action' || !node.data.blockId) {
+            return 'Code action';
+        }
+
+        const index = this.codeActionsForBlock(node.data.blockId).findIndex(
+            (page) => page.nodeId === nodeId,
+        );
+
+        return index === -1 ? 'Code action' : `Page ${index + 1}`;
+    }
+
+    /** The node a block's action chain visually hangs from on the flow chart. */
+    codeActionAnchorNodeId(blockId: string): string | null {
+        const slide = this.slideContainingBlock(blockId);
+        const block = this.findBlock(blockId);
+
+        if (!slide || !block) {
+            return null;
+        }
+
+        const pinned = block.transition?.nodeId
+            ? this.findFlowNode(block.transition.nodeId)
+            : null;
+
+        return (pinned ?? this.slideNodeFor(slide.id))?.id ?? null;
+    }
+
+    private pushCodeActionNode(
+        slideId: string,
+        blockId: string,
+        actionId: string,
+    ): void {
+        const tail = this.codeActionsForBlock(blockId).at(-1);
+        const tailNode = tail ? this.findFlowNode(tail.nodeId) : null;
+        const anchorId = this.codeActionAnchorNodeId(blockId);
+        const anchorNode = anchorId ? this.findFlowNode(anchorId) : null;
+        const base = tailNode ?? anchorNode;
+        const position = base
+            ? {
+                  x: base.position.x + (tailNode ? 0 : 260),
+                  y: base.position.y + 80,
+              }
+            : { x: 0, y: 0 };
+        const node: MutableFlowNode = {
+            id: `node-${crypto.randomUUID()}`,
+            type: 'code-action',
+            position,
+            data: { slideId, blockId, actionId },
+        };
+
+        this.flow.nodes.push(node);
+
+        if (tail) {
+            this.flow.edges.push({
+                id: `edge-${crypto.randomUUID()}`,
+                source: tail.nodeId,
+                target: node.id,
+                label: null,
+            });
+        }
+    }
+
     slideForNode(nodeId: string): MutableSlide | null {
         const node = this.findFlowNode(nodeId);
 
@@ -1004,6 +1356,9 @@ export class EditorState {
                         this.selectedBlockId = null;
                     }
 
+                    // A removed code block takes its action pages' nodes
+                    // (and their edges) with it.
+                    this.reconcileCodeActionNodes();
                     this.dirty = true;
 
                     return;
@@ -1034,6 +1389,7 @@ export class EditorState {
             lang: null,
             src: null,
             alt: null,
+            actions: [],
         };
     }
 
@@ -1059,6 +1415,7 @@ export class EditorState {
             lang: null,
             src: null,
             alt: null,
+            actions: [],
         };
 
         const slide = this.selectedSlide;
@@ -1075,6 +1432,11 @@ export class EditorState {
         this.dirty = true;
 
         return block;
+    }
+
+    /** Public lookup for surfaces that address a block by id (e.g. the sequence modal). */
+    blockById(blockId: string): MutableBlock | null {
+        return this.findBlock(blockId);
     }
 
     private findBlock(blockId: string): MutableBlock | null {

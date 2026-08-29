@@ -8,4 +8,5 @@ enum FlowNodeType: string
 {
     case Slide = 'slide';
     case Transition = 'transition';
+    case CodeAction = 'code-action';
 }

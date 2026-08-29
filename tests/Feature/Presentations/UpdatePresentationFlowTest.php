@@ -54,6 +54,50 @@ test('a valid flow persists and is returned to the editor', function () {
         );
 });
 
+test('a flow with code-action nodes and matching block actions persists', function () {
+    $user = User::factory()->create();
+    $presentation = PresentationModel::factory()->withSlides(2)->create([
+        'team_id' => $user->currentTeam->id,
+    ]);
+
+    $content = $presentation->content;
+    $content['slides'][0]['slots'] = [
+        'main' => [[
+            'id' => 'block-code',
+            'type' => 'code',
+            'lang' => 'php',
+            'content' => "echo 'v1';",
+            'style' => [],
+            'transition' => null,
+            'actions' => [
+                ['id' => 'action-1', 'code' => "echo 'v2';", 'highlightLines' => '1'],
+            ],
+        ]],
+    ];
+
+    $flow = validFlowPayload();
+    $flow['nodes'][] = [
+        'id' => 'ca1',
+        'type' => 'code-action',
+        'position' => ['x' => 480, 'y' => 0],
+        'data' => ['slideId' => 'slide-1', 'blockId' => 'block-code', 'actionId' => 'action-1'],
+    ];
+
+    $this
+        ->actingAs($user)
+        ->put(route('presentations.update', [
+            'current_team' => $user->currentTeam->slug,
+            'presentation' => $presentation->id,
+        ]), ['content' => $content, 'flow' => $flow])
+        ->assertSessionDoesntHaveErrors();
+
+    $presentation->refresh();
+
+    expect($presentation->flow)->toBe($flow)
+        ->and($presentation->content['slides'][0]['slots']['main'][0]['actions'])
+        ->toBe($content['slides'][0]['slots']['main'][0]['actions']);
+});
+
 test('a flow-only update leaves the content untouched', function () {
     $user = User::factory()->create();
     $presentation = PresentationModel::factory()->withSlides(2)->create([

@@ -7,6 +7,7 @@ import type {
 
 // Relative + extensioned so Node can run this file natively (scripts/present.mjs).
 import {
+    codeActionCues,
     compileFlow,
     defaultFlowFromContent,
     enabledSlideIds,
@@ -15,7 +16,7 @@ import {
     migrateLegacyTransitions,
     stepIndexBySlide,
 } from './flow-compiler.ts';
-import type { StepIndex } from './flow-compiler.ts';
+import type { CodeActionCue, CodePage, StepIndex } from './flow-compiler.ts';
 import { FREE_DEFAULTS } from './free-drag.ts';
 import { layoutDefinitions } from './layouts.ts';
 
@@ -55,6 +56,16 @@ const escapeTemplateLiteral = (value: string): string =>
         .replaceAll('\\', '\\\\')
         .replaceAll('`', '\\`')
         .replaceAll('${', '\\${');
+
+/**
+ * Code blocks with action pages need an instance ref (`bind:this`) so the
+ * generated <Action> fragments can morph them; both maps are keyed by block
+ * id and shared across the whole deck (block ids are globally unique).
+ */
+type CodeActionContext = {
+    refNameByBlockId: Map<string, string>;
+    cuesByBlockId: Map<string, CodeActionCue[]>;
+};
 
 const blockStyleAttribute = (block: Block): string => {
     const parts = [
@@ -120,14 +131,26 @@ const renderRichtextBlock = (block: Block, depth: number): string => {
     return `${pad}<div class="richtext">\n${inner}\n${pad}</div>`;
 };
 
-const renderBlock = (block: Block, depth: number): string => {
+const renderBlock = (
+    block: Block,
+    depth: number,
+    ctx: CodeActionContext,
+): string => {
     const pad = INDENT.repeat(depth);
 
     switch (block.type) {
         case 'richtext':
             return renderRichtextBlock(block, depth);
-        case 'code':
-            return `${pad}<Code code={\`${escapeTemplateLiteral(block.content)}\`} lang="${escapeAttribute(block.lang ?? 'text')}" theme="github-dark" />`;
+        case 'code': {
+            const ref = ctx.refNameByBlockId.get(block.id);
+
+            // autoIndent={false}: Animotion's indent() dedents by the smallest
+            // indent among *indented* lines, ignoring zero-indent lines — a
+            // snippet with top-level lines loses its whole first indent level.
+            // Lecturn stores code verbatim and the literal adds no wrapper
+            // indentation, so the dedent service is pure damage here.
+            return `${pad}<Code ${ref ? `bind:this={${ref}} ` : ''}code={\`${escapeTemplateLiteral(block.content)}\`} lang="${escapeAttribute(block.lang ?? 'text')}" theme="github-dark" autoIndent={false} />`;
+        }
         case 'image':
             // Inline style, not a class: the embed injects its CSS globally into
             // the host page (shadow: 'none'), so a bare `img {}` rule would leak
@@ -139,6 +162,33 @@ const renderBlock = (block: Block, depth: number): string => {
         default:
             return `${pad}<p${blockStyleAttribute(block)}>${escapeHtml(block.content)}</p>`;
     }
+};
+
+/**
+ * The block's <Action> fragments, one per page. Both callbacks morph the
+ * block and (re)apply the line highlight; `*` doubles as the reset (select
+ * all = no dimming), matching the Animotion idiom.
+ */
+const renderBlockActions = (
+    block: Block,
+    depth: number,
+    ctx: CodeActionContext,
+): string[] => {
+    const cues = ctx.cuesByBlockId.get(block.id) ?? [];
+    const ref = ctx.refNameByBlockId.get(block.id);
+
+    if (!ref || cues.length === 0) {
+        return [];
+    }
+
+    const pad = INDENT.repeat(depth);
+    const fire = (page: CodePage): string =>
+        `async () => { await ${ref}.update\`${escapeTemplateLiteral(page.code)}\`; ${ref}.selectLines\`${page.highlightLines ?? '*'}\`; }`;
+
+    return cues.map(
+        (cue) =>
+            `${pad}<Action order={${cue.order}} do={${fire(cue.show)}} undo={${fire(cue.back)}} />`,
+    );
 };
 
 const freeBlockStyle = (block: Block): string => {
@@ -159,6 +209,7 @@ const renderFreeSlot = (
     blocks: Block[],
     depth: number,
     steps: StepIndex,
+    ctx: CodeActionContext,
 ): string => {
     const pad = INDENT.repeat(depth);
     const inner = depth + 1;
@@ -177,10 +228,12 @@ const renderFreeSlot = (
             lines.push(
                 `${INDENT.repeat(inner + 1)}<Transition order={${order}}>`,
             );
-            lines.push(renderBlock(block, inner + 2));
+            lines.push(renderBlock(block, inner + 2, ctx));
+            lines.push(...renderBlockActions(block, inner + 2, ctx));
             lines.push(`${INDENT.repeat(inner + 1)}</Transition>`);
         } else {
-            lines.push(renderBlock(block, inner + 1));
+            lines.push(renderBlock(block, inner + 1, ctx));
+            lines.push(...renderBlockActions(block, inner + 1, ctx));
         }
 
         lines.push(`${INDENT.repeat(inner)}</div>`);
@@ -196,25 +249,29 @@ const renderSlot = (
     blocks: Block[],
     depth: number,
     steps: StepIndex,
+    ctx: CodeActionContext,
 ): string => {
     const pad = INDENT.repeat(depth);
     const lines: string[] = [`${pad}<div class="slot-${slotName}">`];
     const { staticBlocks, stepGroups } = groupBlocksIntoSteps(blocks, steps);
 
     for (const block of staticBlocks) {
-        lines.push(renderBlock(block, depth + 1));
+        lines.push(renderBlock(block, depth + 1, ctx));
+        lines.push(...renderBlockActions(block, depth + 1, ctx));
     }
 
     // Blocks pinned to the same node reveal together: one <Transition> per
     // node, ordered by chain position (order maps to data-fragment-index,
-    // which also keeps steps in sync across slots).
+    // which also keeps steps in sync across slots). A code block's <Action>
+    // fragments nest inside its transition, mirroring the Animotion idiom.
     for (const group of stepGroups) {
         lines.push(
             `${INDENT.repeat(depth + 1)}<Transition order={${group.order}}>`,
         );
 
         for (const block of group.blocks) {
-            lines.push(renderBlock(block, depth + 2));
+            lines.push(renderBlock(block, depth + 2, ctx));
+            lines.push(...renderBlockActions(block, depth + 2, ctx));
         }
 
         lines.push(`${INDENT.repeat(depth + 1)}</Transition>`);
@@ -229,6 +286,7 @@ const renderSlide = (
     slide: Slide,
     steps: StepIndex,
     backgroundImage: string | null,
+    ctx: CodeActionContext,
 ): string => {
     // A slide's own color wins; otherwise the deck-wide image is the backdrop.
     let backgroundAttr = '';
@@ -247,20 +305,20 @@ const renderSlide = (
         const blocks = slide.slots['main'] ?? [];
 
         for (const block of blocks) {
-            lines.push(renderBlock(block, 2));
+            lines.push(renderBlock(block, 2, ctx));
         }
     } else if (slide.layout === 'free') {
         const blocks = slide.slots['main'] ?? [];
 
         if (blocks.length > 0) {
-            lines.push(renderFreeSlot(blocks, 2, steps));
+            lines.push(renderFreeSlot(blocks, 2, steps, ctx));
         }
     } else {
         for (const slotName of layoutDefinitions[slide.layout].slots) {
             const blocks = slide.slots[slotName];
 
             if (blocks && blocks.length > 0) {
-                lines.push(renderSlot(slotName, blocks, 2, steps));
+                lines.push(renderSlot(slotName, blocks, 2, steps, ctx));
             }
         }
     }
@@ -353,12 +411,52 @@ export function generatePresentationSvelte(
         ),
     );
 
+    // Cues resolved per shown slide; block ids are globally unique, so both
+    // maps flatten across the deck. Ref names are stable (code_0, code_1, …)
+    // in first-appearance order.
+    const ctx: CodeActionContext = {
+        refNameByBlockId: new Map(),
+        cuesByBlockId: new Map(),
+    };
+
+    for (const compiledSlide of deck.slides) {
+        if (!enabled.has(compiledSlide.slide.id)) {
+            continue;
+        }
+
+        for (const cue of codeActionCues(
+            compiledSlide.slide,
+            compiledSlide.steps,
+        )) {
+            if (!ctx.refNameByBlockId.has(cue.blockId)) {
+                ctx.refNameByBlockId.set(
+                    cue.blockId,
+                    `code_${ctx.refNameByBlockId.size}`,
+                );
+            }
+
+            ctx.cuesByBlockId.set(cue.blockId, [
+                ...(ctx.cuesByBlockId.get(cue.blockId) ?? []),
+                cue,
+            ]);
+        }
+    }
+
+    const usesAction = ctx.cuesByBlockId.size > 0;
+
     const imports = [
         'Presentation',
         'Slide',
         ...(usesTransition ? ['Transition'] : []),
         ...(usesCode ? ['Code'] : []),
+        ...(usesAction ? ['Action'] : []),
     ].join(', ');
+
+    const refDeclarations = usesAction
+        ? `\n\n${[...ctx.refNameByBlockId.values()]
+              .map((name) => `${INDENT}let ${name} = $state();`)
+              .join('\n')}`
+        : '';
 
     const slides = shownSlides
         .map((slide) =>
@@ -366,12 +464,13 @@ export function generatePresentationSvelte(
                 slide,
                 stepsBySlideId.get(slide.id) ?? new Map(),
                 content.backgroundImage ?? null,
+                ctx,
             ),
         )
         .join('\n\n');
 
     return `<script>
-${INDENT}import { ${imports} } from '@animotion/core';
+${INDENT}import { ${imports} } from '@animotion/core';${refDeclarations}
 </script>
 
 <Presentation>

@@ -74,6 +74,16 @@ readonly class FlowGraph
                 );
             }
 
+            // Code-action chains are their own lane: pages of one code block
+            // ordered among themselves. The visual anchor to the owning
+            // transition or slide is derived client-side, never persisted.
+            if (($source->type === FlowNodeType::CodeAction || $target->type === FlowNodeType::CodeAction)
+                && $source->type !== $target->type) {
+                throw new InvalidFlowGraph(
+                    "Edge \"{$edge->id}\" mixes lanes — code-action nodes may only connect to code-action nodes."
+                );
+            }
+
             if ($target->type === FlowNodeType::Slide) {
                 if (isset($outgoingNavBySource[$edge->source])) {
                     throw new InvalidFlowGraph("Slide node \"{$edge->source}\" has more than one navigation edge.");
@@ -95,21 +105,22 @@ readonly class FlowGraph
             }
         }
 
-        // A transition belongs to a slide through its stable slideId, not
-        // through edges, so an unwired step is valid. Chain edges only order
-        // steps, and each has at most one outgoing and one incoming chain edge,
-        // so the only shape to reject is a closed loop with no anchor.
+        // A step (transition or code-action) belongs to its owner through a
+        // stable id, not through edges, so an unwired step is valid. Chain
+        // edges only order steps, and each has at most one outgoing and one
+        // incoming chain edge, so the only shape to reject is a closed loop
+        // with no anchor. Lanes are disjoint, so one walk covers both.
         $chainTargetBySource = [];
 
         foreach ($this->edges as $edge) {
-            if ($nodesById[$edge->source]->type === FlowNodeType::Transition
-                && $nodesById[$edge->target]->type === FlowNodeType::Transition) {
+            if ($nodesById[$edge->source]->type !== FlowNodeType::Slide
+                && $nodesById[$edge->source]->type === $nodesById[$edge->target]->type) {
                 $chainTargetBySource[$edge->source] = $edge->target;
             }
         }
 
         foreach ($nodesById as $node) {
-            if ($node->type !== FlowNodeType::Transition) {
+            if ($node->type === FlowNodeType::Slide) {
                 continue;
             }
 
@@ -120,7 +131,7 @@ readonly class FlowGraph
                 $cursor = $chainTargetBySource[$cursor];
 
                 if (++$steps > count($nodesById)) {
-                    throw new InvalidFlowGraph("Transition node \"{$node->id}\" is part of a cycle.");
+                    throw new InvalidFlowGraph("Node \"{$node->id}\" is part of a cycle.");
                 }
             }
         }

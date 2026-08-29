@@ -195,6 +195,86 @@ it('allows the same transition label on different slides', function () {
     expect($graph->nodes)->toHaveCount(4);
 });
 
+/** @return array<string, mixed> */
+function codeActionNode(string $id, string $blockId = 'block-1', string $actionId = 'action-1', float $y = 0): array
+{
+    return [
+        'id' => $id,
+        'type' => 'code-action',
+        'position' => ['x' => 400.0, 'y' => $y],
+        'data' => ['slideId' => 'slide-a', 'blockId' => $blockId, 'actionId' => $actionId],
+    ];
+}
+
+it('accepts a chained code-action lane', function () {
+    $graph = FlowGraph::fromArray(flowData(
+        [
+            slideNode('n1', 'slide-a'),
+            codeActionNode('ca1', 'block-1', 'action-1'),
+            codeActionNode('ca2', 'block-1', 'action-2', 100),
+        ],
+        [edge('e1', 'ca1', 'ca2')],
+    ));
+
+    expect($graph->nodes)->toHaveCount(3)
+        ->and($graph->edges)->toHaveCount(1);
+});
+
+it('rejects a code-action node without a blockId', function () {
+    $node = codeActionNode('ca1');
+    unset($node['data']['blockId']);
+
+    FlowGraph::fromArray(flowData([$node]));
+})->throws(InvalidFlowGraph::class, 'requires a non-empty blockId');
+
+it('rejects a code-action node without an actionId', function () {
+    $node = codeActionNode('ca1');
+    unset($node['data']['actionId']);
+
+    FlowGraph::fromArray(flowData([$node]));
+})->throws(InvalidFlowGraph::class, 'requires a non-empty actionId');
+
+it('rejects an edge from a transition into a code-action', function () {
+    // The visual anchor is derived client-side; persisted edges must stay
+    // within the code-action lane.
+    FlowGraph::fromArray(flowData(
+        [transitionNode('t1'), codeActionNode('ca1')],
+        [edge('e1', 't1', 'ca1')],
+    ));
+})->throws(InvalidFlowGraph::class, 'mixes lanes');
+
+it('rejects an edge from a slide into a code-action', function () {
+    FlowGraph::fromArray(flowData(
+        [slideNode('n1', 'slide-a'), codeActionNode('ca1')],
+        [edge('e1', 'n1', 'ca1')],
+    ));
+})->throws(InvalidFlowGraph::class, 'mixes lanes');
+
+it('rejects an edge from a code-action into a slide', function () {
+    FlowGraph::fromArray(flowData(
+        [slideNode('n1', 'slide-a'), codeActionNode('ca1')],
+        [edge('e1', 'ca1', 'n1')],
+    ));
+})->throws(InvalidFlowGraph::class, 'mixes lanes');
+
+it('rejects a code-action cycle', function () {
+    FlowGraph::fromArray(flowData(
+        [codeActionNode('ca1'), codeActionNode('ca2', 'block-1', 'action-2', 100)],
+        [edge('e1', 'ca1', 'ca2'), edge('e2', 'ca2', 'ca1')],
+    ));
+})->throws(InvalidFlowGraph::class, 'part of a cycle');
+
+it('rejects a code-action with two incoming edges', function () {
+    FlowGraph::fromArray(flowData(
+        [
+            codeActionNode('ca1'),
+            codeActionNode('ca2', 'block-1', 'action-2', 100),
+            codeActionNode('ca3', 'block-1', 'action-3', 200),
+        ],
+        [edge('e1', 'ca1', 'ca3'), edge('e2', 'ca2', 'ca3')],
+    ));
+})->throws(InvalidFlowGraph::class, 'more than one incoming edge');
+
 it('allows unlabeled steps to repeat within a slide', function () {
     $graph = FlowGraph::fromArray(flowData([
         slideNode('n1', 'slide-a'),
