@@ -26,9 +26,15 @@ function slideNode(string $id, string $slideId, float $y = 0): array
 }
 
 /** @return array<string, mixed> */
-function transitionNode(string $id, ?string $label = null, float $y = 0): array
+function transitionNode(string $id, ?string $label = null, float $y = 0, ?string $slideId = null): array
 {
-    return ['id' => $id, 'type' => 'transition', 'position' => ['x' => 200.0, 'y' => $y], 'data' => ['label' => $label]];
+    $data = ['label' => $label];
+
+    if ($slideId !== null) {
+        $data['slideId'] = $slideId;
+    }
+
+    return ['id' => $id, 'type' => 'transition', 'position' => ['x' => 200.0, 'y' => $y], 'data' => $data];
 }
 
 /** @return array<string, mixed> */
@@ -132,9 +138,23 @@ it('rejects a transition with two incoming edges', function () {
     ));
 })->throws(InvalidFlowGraph::class, 'more than one incoming edge');
 
-it('rejects an orphan transition node', function () {
-    FlowGraph::fromArray(flowData([slideNode('n1', 'slide-a'), transitionNode('t1')]));
-})->throws(InvalidFlowGraph::class, 'not connected to any slide');
+it('accepts a step that owns a slide but has no edges', function () {
+    // Ownership lives on the node (slideId), so an unwired step is valid; it
+    // simply orders by canvas position rather than by a chain edge.
+    $graph = FlowGraph::fromArray(flowData([
+        slideNode('n1', 'slide-a'),
+        transitionNode('t1', 'reveal', 100, 'slide-a'),
+    ]));
+
+    expect($graph->nodes)->toHaveCount(2)
+        ->and($graph->edges)->toBeEmpty();
+});
+
+it('accepts an unassigned transition node with no slide and no edges', function () {
+    $graph = FlowGraph::fromArray(flowData([transitionNode('t1')]));
+
+    expect($graph->nodes)->toHaveCount(1);
+});
 
 it('rejects a transition cycle', function () {
     FlowGraph::fromArray(flowData(
@@ -155,32 +175,32 @@ it('rejects an unknown node type', function () {
     ]));
 })->throws(InvalidFlowGraph::class, 'Unknown flow node type');
 
-it('rejects duplicate transition labels within one chain', function () {
-    FlowGraph::fromArray(flowData(
-        [slideNode('n1', 'slide-a'), transitionNode('t1', 'reveal'), transitionNode('t2', 'reveal', 100)],
-        [edge('e1', 'n1', 't1'), edge('e2', 't1', 't2')],
-    ));
+it('rejects duplicate transition labels among a slide\'s steps', function () {
+    // Same slide owner, same label — even without an edge between them.
+    FlowGraph::fromArray(flowData([
+        slideNode('n1', 'slide-a'),
+        transitionNode('t1', 'reveal', 0, 'slide-a'),
+        transitionNode('t2', 'reveal', 100, 'slide-a'),
+    ]));
 })->throws(InvalidFlowGraph::class, 'Duplicate transition label');
 
 it('allows the same transition label on different slides', function () {
-    $graph = FlowGraph::fromArray(flowData(
-        [
-            slideNode('n1', 'slide-a'),
-            slideNode('n2', 'slide-b', 200),
-            transitionNode('t1', 'reveal'),
-            transitionNode('t2', 'reveal', 100),
-        ],
-        [edge('e1', 'n1', 't1'), edge('e2', 'n2', 't2')],
-    ));
+    $graph = FlowGraph::fromArray(flowData([
+        slideNode('n1', 'slide-a'),
+        slideNode('n2', 'slide-b', 200),
+        transitionNode('t1', 'reveal', 0, 'slide-a'),
+        transitionNode('t2', 'reveal', 100, 'slide-b'),
+    ]));
 
     expect($graph->nodes)->toHaveCount(4);
 });
 
-it('allows unlabeled transitions to repeat within a chain', function () {
-    $graph = FlowGraph::fromArray(flowData(
-        [slideNode('n1', 'slide-a'), transitionNode('t1'), transitionNode('t2', null, 100)],
-        [edge('e1', 'n1', 't1'), edge('e2', 't1', 't2')],
-    ));
+it('allows unlabeled steps to repeat within a slide', function () {
+    $graph = FlowGraph::fromArray(flowData([
+        slideNode('n1', 'slide-a'),
+        transitionNode('t1', null, 0, 'slide-a'),
+        transitionNode('t2', null, 100, 'slide-a'),
+    ]));
 
     expect($graph->nodes)->toHaveCount(3);
 });

@@ -34,15 +34,20 @@ class PresentationModelFactory extends Factory
             for ($i = 1; $i <= $count; $i++) {
                 $slides[] = [
                     'id' => "slide-{$i}",
-                    'layout' => 'left-right',
+                    'layout' => 'free',
                     'background' => null,
                     'slots' => [
-                        'left' => [
+                        'main' => [
                             [
                                 'id' => "block-{$i}-1",
                                 'type' => 'text',
                                 'content' => fake()->sentence(),
-                                'style' => ['fontSize' => '2rem'],
+                                'style' => [
+                                    'fontSize' => '2rem',
+                                    'x' => '10',
+                                    'y' => '20',
+                                    'width' => '30',
+                                ],
                                 'transition' => null,
                             ],
                         ],

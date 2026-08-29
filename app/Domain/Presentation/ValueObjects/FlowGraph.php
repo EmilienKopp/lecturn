@@ -7,12 +7,14 @@ namespace App\Domain\Presentation\ValueObjects;
 use App\Domain\Presentation\Exceptions\InvalidFlowGraph;
 
 /**
- * The slideshow flow DSL (v1.0): slide nodes and transition nodes.
+ * The slideshow flow DSL (v1.0): slide nodes and transition (step) nodes.
  *
- * Two-lane edge model — a slide node has at most one navigation edge to the
- * next slide and at most one edge to its first transition; transition chains
- * are isolated linear subgraphs (transition→transition only). A slide node
- * with no edges is valid: no reveals, implicit next slide by content order.
+ * A step belongs to a slide through its stable `slideId`, so it keeps its
+ * identity no matter what happens to edges. Edges only order things: a slide
+ * has at most one navigation edge to the next slide, and transition→transition
+ * chains (each step with at most one incoming and one outgoing chain edge)
+ * impose explicit step order. Unwired steps order by canvas position instead,
+ * and a slide with no edges is valid (implicit next slide by content order).
  */
 readonly class FlowGraph
 {
@@ -93,13 +95,16 @@ readonly class FlowGraph
             }
         }
 
-        // Every transition must be part of a chain anchored at a slide node —
-        // walking incoming edges backwards must reach a slide before looping.
-        $chainSourceByTarget = [];
+        // A transition belongs to a slide through its stable slideId, not
+        // through edges, so an unwired step is valid. Chain edges only order
+        // steps, and each has at most one outgoing and one incoming chain edge,
+        // so the only shape to reject is a closed loop with no anchor.
+        $chainTargetBySource = [];
 
         foreach ($this->edges as $edge) {
-            if ($nodesById[$edge->target]->type === FlowNodeType::Transition) {
-                $chainSourceByTarget[$edge->target] = $edge->source;
+            if ($nodesById[$edge->source]->type === FlowNodeType::Transition
+                && $nodesById[$edge->target]->type === FlowNodeType::Transition) {
+                $chainTargetBySource[$edge->source] = $edge->target;
             }
         }
 
@@ -108,16 +113,11 @@ readonly class FlowGraph
                 continue;
             }
 
-            if (! isset($chainSourceByTarget[$node->id])) {
-                throw new InvalidFlowGraph("Transition node \"{$node->id}\" is not connected to any slide.");
-            }
-
             $cursor = $node->id;
             $steps = 0;
 
-            while ($nodesById[$cursor]->type === FlowNodeType::Transition) {
-                $cursor = $chainSourceByTarget[$cursor]
-                    ?? throw new InvalidFlowGraph("Transition node \"{$cursor}\" is not connected to any slide.");
+            while (isset($chainTargetBySource[$cursor])) {
+                $cursor = $chainTargetBySource[$cursor];
 
                 if (++$steps > count($nodesById)) {
                     throw new InvalidFlowGraph("Transition node \"{$node->id}\" is part of a cycle.");
@@ -126,32 +126,28 @@ readonly class FlowGraph
         }
 
         // Transition labels double as step names in the editor's pin picker,
-        // so explicit labels must be unique within a slide's chain.
-        $chainTargetBySource = array_flip($chainSourceByTarget);
+        // so explicit labels must be unique among the steps a slide owns.
+        $labelsBySlide = [];
 
         foreach ($nodesById as $node) {
-            if ($node->type !== FlowNodeType::Slide) {
+            if ($node->type !== FlowNodeType::Transition) {
                 continue;
             }
 
-            $labels = [];
-            $cursor = $chainTargetBySource[$node->id] ?? null;
+            $slideId = $node->data['slideId'] ?? null;
+            $label = $node->data['label'] ?? null;
 
-            while ($cursor !== null) {
-                $label = $nodesById[$cursor]->data['label'] ?? null;
-
-                if (is_string($label) && $label !== '') {
-                    if (isset($labels[$label])) {
-                        throw new InvalidFlowGraph(
-                            "Duplicate transition label \"{$label}\" in the chain of slide node \"{$node->id}\"."
-                        );
-                    }
-
-                    $labels[$label] = true;
-                }
-
-                $cursor = $chainTargetBySource[$cursor] ?? null;
+            if (! is_string($slideId) || ! is_string($label) || $label === '') {
+                continue;
             }
+
+            if (isset($labelsBySlide[$slideId][$label])) {
+                throw new InvalidFlowGraph(
+                    "Duplicate transition label \"{$label}\" among the steps of slide \"{$slideId}\"."
+                );
+            }
+
+            $labelsBySlide[$slideId][$label] = true;
         }
     }
 

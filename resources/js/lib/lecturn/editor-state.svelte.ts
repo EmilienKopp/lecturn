@@ -1,7 +1,9 @@
 import { SvelteSet } from 'svelte/reactivity';
 import {
     defaultFlowFromContent,
+    enabledSlideIds,
     migrateLegacyTransitions,
+    transitionsForSlide,
 } from '@/lib/lecturn/flow-compiler';
 import { layoutDefinitions } from '@/lib/lecturn/layouts';
 import type {
@@ -58,23 +60,39 @@ export class EditorState {
         return this.findBlock(this.selectedBlockId);
     }
 
-    addSlide(layout: SlideLayout = 'center'): void {
+    addSlide(layout: SlideLayout = 'free'): void {
+        const id = `slide-${crypto.randomUUID()}`;
         this.content.slides.push({
-            id: `slide-${crypto.randomUUID()}`,
+            id,
             layout,
             background: null,
             slots: {},
             config: null,
+            title: null,
         });
         this.selectedSlideIndex = this.content.slides.length - 1;
         this.selectedBlockId = null;
         this.syncSlideNodes();
+
+        // A wired deck gates playback on the nav chain, so a new slide has to
+        // join it or it would be born disabled; splice it onto the tail by
+        // order. Unwired decks stay implicit (every slide shown).
+        if (this.hasNavEdges()) {
+            this.enableSlide(id);
+        }
+
         this.dirty = true;
     }
 
     removeSlide(index: number): void {
         if (this.content.slides.length <= 1) {
             return;
+        }
+
+        // Unlink the slide from the nav chain first so its neighbors bridge
+        // (previous → next) instead of the tail falling off and disabling.
+        if (this.hasNavEdges()) {
+            this.disableSlide(this.content.slides[index].id);
         }
 
         this.content.slides.splice(index, 1);
@@ -91,8 +109,8 @@ export class EditorState {
 
     /**
      * Reconciles slide nodes with content.slides: every slide gets exactly
-     * one node; nodes whose slide is gone are removed together with their
-     * transition chain and touching edges. Transition nodes are otherwise
+     * one node; a slide node whose slide is gone is removed together with the
+     * steps it owns and any touching edges. Transition nodes are otherwise
      * never created or destroyed here — they live only in the flow.
      */
     syncSlideNodes(): void {
@@ -100,6 +118,7 @@ export class EditorState {
             this.content.slides.map((slide) => slide.id),
         );
         const removed = new SvelteSet<string>();
+        const removedSlideIds = new SvelteSet<string>();
 
         for (const node of this.flow.nodes) {
             if (
@@ -107,12 +126,20 @@ export class EditorState {
                 (!node.data.slideId || !slideIds.has(node.data.slideId))
             ) {
                 removed.add(node.id);
-                let cursor = this.chainTargetId(node.id);
 
-                while (cursor && !removed.has(cursor)) {
-                    removed.add(cursor);
-                    cursor = this.chainTargetId(cursor);
+                if (node.data.slideId) {
+                    removedSlideIds.add(node.data.slideId);
                 }
+            }
+        }
+
+        for (const node of this.flow.nodes) {
+            if (
+                node.type === 'transition' &&
+                node.data.slideId &&
+                removedSlideIds.has(node.data.slideId)
+            ) {
+                removed.add(node.id);
             }
         }
 
@@ -151,23 +178,28 @@ export class EditorState {
     }
 
     /**
-     * A pin only means something while its node sits in the block's own
-     * slide's chain; once the node is deleted or re-wired elsewhere the
-     * block falls back to static.
+     * A pin only means something while its step still belongs to the block's
+     * slide. Steps are owned by `data.slideId`, not by edges, so deleting an
+     * edge never unpins a block — only deleting the step node, or moving it to
+     * another slide, drops the pin back to static.
      */
     private reconcilePins(): void {
         for (const slide of this.content.slides) {
-            const chain = new SvelteSet(
-                this.transitionsForSlide(slide.id).map(
-                    (transition) => transition.nodeId,
-                ),
+            const owned = new SvelteSet(
+                this.flow.nodes
+                    .filter(
+                        (node) =>
+                            node.type === 'transition' &&
+                            node.data.slideId === slide.id,
+                    )
+                    .map((node) => node.id),
             );
 
             for (const blocks of Object.values(slide.slots)) {
                 for (const block of blocks) {
                     if (
                         block.transition?.nodeId &&
-                        !chain.has(block.transition.nodeId)
+                        !owned.has(block.transition.nodeId)
                     ) {
                         block.transition = null;
                         this.dirty = true;
@@ -265,15 +297,29 @@ export class EditorState {
             return false;
         }
 
-        // Labels double as step names in the pin picker, so merging the
-        // target's chain segment must not introduce a duplicate label.
-        if (target.type === 'transition') {
-            const merged = [
-                ...this.chainLabelsThrough(sourceId),
-                ...this.chainLabelsFrom(targetId),
-            ].filter((label): label is string => label !== null);
+        // Wiring a step onto a slide (or another step) makes it, and the chain
+        // hanging off it, belong to that slide. Labels double as step names, so
+        // the move must not collide with a label the slide already owns.
+        const ownerSlideId = source.data.slideId ?? null;
 
-            if (new SvelteSet(merged).size !== merged.length) {
+        if (target.type === 'transition' && ownerSlideId) {
+            const moving = new SvelteSet(this.downstreamChainIds(targetId));
+            const existing = this.flow.nodes
+                .filter(
+                    (node) =>
+                        node.type === 'transition' &&
+                        node.data.slideId === ownerSlideId &&
+                        !moving.has(node.id),
+                )
+                .map((node) => node.data.label ?? null);
+            const incoming = [...moving].map(
+                (id) => this.findFlowNode(id)?.data.label ?? null,
+            );
+            const labels = [...existing, ...incoming].filter(
+                (label): label is string => label !== null && label !== '',
+            );
+
+            if (new SvelteSet(labels).size !== labels.length) {
                 return false;
             }
         }
@@ -284,6 +330,12 @@ export class EditorState {
             target: targetId,
             label: null,
         });
+
+        if (target.type === 'transition' && ownerSlideId) {
+            this.assignSlideIdDownstream(targetId, ownerSlideId);
+            this.reconcilePins();
+        }
+
         this.dirty = true;
 
         return true;
@@ -293,8 +345,10 @@ export class EditorState {
         const before = this.flow.edges.length;
         this.flow.edges = this.flow.edges.filter((edge) => edge.id !== edgeId);
 
+        // Edges only order steps; ownership lives on the node, so a removed
+        // edge never changes which steps a slide has or unpins any block. The
+        // now-unwired step simply reorders by its canvas position.
         if (this.flow.edges.length !== before) {
-            this.reconcilePins();
             this.dirty = true;
         }
     }
@@ -308,7 +362,7 @@ export class EditorState {
         }
     }
 
-    /** Returns false when the label would collide within the node's chain. */
+    /** Returns false when the label collides with another step on the slide. */
     setTransitionLabel(nodeId: string, label: string | null): boolean {
         const node = this.findFlowNode(nodeId);
 
@@ -323,7 +377,14 @@ export class EditorState {
         if (
             label !== null &&
             label !== '' &&
-            this.chainLabelsThrough(nodeId, nodeId).includes(label)
+            node.data.slideId &&
+            this.flow.nodes.some(
+                (candidate) =>
+                    candidate.type === 'transition' &&
+                    candidate.id !== nodeId &&
+                    candidate.data.slideId === node.data.slideId &&
+                    candidate.data.label === label,
+            )
         ) {
             return false;
         }
@@ -334,30 +395,222 @@ export class EditorState {
         return true;
     }
 
-    // ── Block pinning ───────────────────────────────────────────────────
+    // ── Slide enablement ────────────────────────────────────────────────
 
-    /** The slide's transition chain in reveal order. */
-    transitionsForSlide(
-        slideId: string,
-    ): { nodeId: string; label: string | null; index: number }[] {
-        const slideNode = this.flow.nodes.find(
-            (node) => node.type === 'slide' && node.data.slideId === slideId,
+    /**
+     * A slide is part of the show when it is the entry (first in order) or has
+     * an incoming navigation edge. A deck with no nav edges is fully enabled
+     * (see flow-compiler's enabledSlideIds), so this only starts gating once the
+     * chain is in use.
+     */
+    isSlideEnabled(slideId: string): boolean {
+        return enabledSlideIds(this.content, this.flow).has(slideId);
+    }
+
+    /** The first slide is the deck entry and can never be disabled. */
+    isEntrySlide(slideId: string): boolean {
+        return this.content.slides[0]?.id === slideId;
+    }
+
+    /** True once any slide→slide edge exists, i.e. the nav chain is in use. */
+    private hasNavEdges(): boolean {
+        return this.flow.edges.some(
+            (edge) =>
+                this.isSlideNode(edge.source) && this.isSlideNode(edge.target),
         );
+    }
 
-        if (!slideNode) {
-            return [];
-        }
+    private isSlideNode(nodeId: string): boolean {
+        return this.findFlowNode(nodeId)?.type === 'slide';
+    }
 
-        return this.chainMemberIds(slideNode.id).map((nodeId, index) => ({
-            nodeId,
-            label: this.findFlowNode(nodeId)?.data.label ?? null,
-            index,
-        }));
+    private slideNodeFor(slideId: string): MutableFlowNode | null {
+        return (
+            this.flow.nodes.find(
+                (node) =>
+                    node.type === 'slide' && node.data.slideId === slideId,
+            ) ?? null
+        );
+    }
+
+    private navOutEdge(nodeId: string): MutableFlow['edges'][number] | null {
+        return (
+            this.flow.edges.find(
+                (edge) =>
+                    edge.source === nodeId && this.isSlideNode(edge.target),
+            ) ?? null
+        );
+    }
+
+    private navInEdges(nodeId: string): MutableFlow['edges'] {
+        return this.flow.edges.filter(
+            (edge) => edge.target === nodeId && this.isSlideNode(edge.source),
+        );
+    }
+
+    private pushNavEdge(sourceId: string, targetId: string): void {
+        this.flow.edges.push({
+            id: `edge-${crypto.randomUUID()}`,
+            source: sourceId,
+            target: targetId,
+            label: null,
+        });
     }
 
     /**
-     * Creates a transition node appended to the slide's chain and returns its
-     * id, or null when the label would collide within the chain.
+     * Turns the implicit "every slide in order" deck into explicit slide→slide
+     * edges. Only runs on an unwired deck, so it never clobbers author edges;
+     * it's the bridge from legacy content order to the nav-chain model.
+     */
+    private materializeChain(): void {
+        if (this.hasNavEdges()) {
+            return;
+        }
+
+        for (let i = 0; i < this.content.slides.length - 1; i++) {
+            const from = this.slideNodeFor(this.content.slides[i].id);
+            const to = this.slideNodeFor(this.content.slides[i + 1].id);
+
+            if (from && to) {
+                this.pushNavEdge(from.id, to.id);
+            }
+        }
+    }
+
+    /** Enables or disables the slide at an index; the entry slide is a no-op. */
+    toggleSlideEnabled(index: number): void {
+        const slide = this.content.slides[index];
+
+        if (!slide || this.isEntrySlide(slide.id)) {
+            return;
+        }
+
+        // Disabling means dropping out of the chain, which only exists once
+        // it's explicit — materialize the implied order first.
+        this.materializeChain();
+
+        if (this.isSlideEnabled(slide.id)) {
+            this.disableSlide(slide.id);
+        } else {
+            this.enableSlide(slide.id);
+        }
+
+        this.dirty = true;
+    }
+
+    /** Unlinks a slide from the nav chain, bridging its neighbors. */
+    private disableSlide(slideId: string): void {
+        const node = this.slideNodeFor(slideId);
+
+        if (!node) {
+            return;
+        }
+
+        const navIn = this.navInEdges(node.id);
+        const navOut = this.navOutEdge(node.id);
+        const nextTargetId = navOut?.target ?? null;
+        const removed = new SvelteSet(
+            [...navIn, ...(navOut ? [navOut] : [])].map((edge) => edge.id),
+        );
+
+        // Reconnect whatever pointed here to whatever this pointed at, so the
+        // chain stays continuous and nothing downstream disables by accident.
+        if (nextTargetId) {
+            for (const edge of navIn) {
+                if (edge.source === nextTargetId) {
+                    continue;
+                }
+
+                const bridged = this.flow.edges.some(
+                    (candidate) =>
+                        !removed.has(candidate.id) &&
+                        candidate.source === edge.source &&
+                        candidate.target === nextTargetId,
+                );
+
+                if (!bridged) {
+                    this.pushNavEdge(edge.source, nextTargetId);
+                }
+            }
+        }
+
+        this.flow.edges = this.flow.edges.filter(
+            (edge) => !removed.has(edge.id),
+        );
+    }
+
+    /**
+     * Splices a slide back into the chain by content order: its nearest enabled
+     * predecessor points to it, and it inherits that predecessor's old target
+     * (the next slide) — so order alone rebuilds the edges.
+     */
+    private enableSlide(slideId: string): void {
+        const index = this.content.slides.findIndex(
+            (slide) => slide.id === slideId,
+        );
+
+        if (index <= 0) {
+            return;
+        }
+
+        const enabled = enabledSlideIds(this.content, this.flow);
+        let predecessor: string | null = null;
+
+        for (let i = index - 1; i >= 0; i--) {
+            if (enabled.has(this.content.slides[i].id)) {
+                predecessor = this.content.slides[i].id;
+                break;
+            }
+        }
+
+        const predecessorNode = predecessor
+            ? this.slideNodeFor(predecessor)
+            : null;
+        const node = this.slideNodeFor(slideId);
+
+        if (!predecessorNode || !node) {
+            return;
+        }
+
+        const inherited = this.navOutEdge(predecessorNode.id);
+        const inheritedTargetId = inherited?.target ?? null;
+        const removed = new SvelteSet(
+            [inherited, this.navOutEdge(node.id)]
+                .filter(
+                    (edge): edge is NonNullable<typeof edge> => edge != null,
+                )
+                .map((edge) => edge.id),
+        );
+
+        this.flow.edges = this.flow.edges.filter(
+            (edge) => !removed.has(edge.id),
+        );
+        this.pushNavEdge(predecessorNode.id, node.id);
+
+        if (inheritedTargetId && inheritedTargetId !== node.id) {
+            this.pushNavEdge(node.id, inheritedTargetId);
+        }
+    }
+
+    // ── Block pinning ───────────────────────────────────────────────────
+
+    /** The slide's reveal steps in order (see flow-compiler transitionsForSlide). */
+    transitionsForSlide(
+        slideId: string,
+    ): { nodeId: string; label: string | null; index: number }[] {
+        return transitionsForSlide(this.flow, slideId).map(
+            (transition, index) => ({
+                nodeId: transition.nodeId,
+                label: transition.label,
+                index,
+            }),
+        );
+    }
+
+    /**
+     * Creates a step owned by the slide, wired onto the end of its current
+     * order, and returns its id — or null when the label would collide with a
+     * step the slide already owns.
      */
     appendTransitionToSlide(
         slideId: string,
@@ -371,27 +624,28 @@ export class EditorState {
             return null;
         }
 
-        const chain = this.chainMemberIds(slideNode.id);
+        const steps = this.transitionsForSlide(slideId);
 
         if (
             label !== null &&
             label !== '' &&
-            chain.some(
-                (nodeId) => this.findFlowNode(nodeId)?.data.label === label,
-            )
+            steps.some((step) => step.label === label)
         ) {
             return null;
         }
 
-        const tailId = chain.at(-1) ?? slideNode.id;
+        const tailId = steps.at(-1)?.nodeId ?? slideNode.id;
+        const tailNode = this.findFlowNode(tailId) ?? slideNode;
         const node: MutableFlowNode = {
             id: `node-${crypto.randomUUID()}`,
             type: 'transition',
+            // Sits below the current tail so the position fallback keeps the
+            // same order once an edge is removed.
             position: {
                 x: slideNode.position.x + 260,
-                y: slideNode.position.y + chain.length * 80,
+                y: tailNode.position.y + 80,
             },
-            data: { label },
+            data: { label, slideId },
         };
 
         this.flow.nodes.push(node);
@@ -450,16 +704,18 @@ export class EditorState {
 
     /**
      * Fallback name for an unlabeled transition node in the flow view:
-     * "Step N" when it belongs to a slide's chain, generic otherwise.
+     * "Step N" when it belongs to a slide, generic otherwise.
      */
     transitionPlaceholder(nodeId: string): string {
-        const anchorId = this.chainAnchorId(nodeId);
+        const node = this.findFlowNode(nodeId);
 
-        if (this.findFlowNode(anchorId)?.type !== 'slide') {
+        if (!node || node.type !== 'transition' || !node.data.slideId) {
             return 'Transition';
         }
 
-        const index = this.chainMemberIds(anchorId).indexOf(nodeId);
+        const index = this.transitionsForSlide(node.data.slideId).findIndex(
+            (step) => step.nodeId === nodeId,
+        );
 
         return index === -1 ? 'Transition' : `Step ${index + 1}`;
     }
@@ -494,69 +750,30 @@ export class EditorState {
         return edge?.target ?? null;
     }
 
-    /** Transition node ids downstream of the anchor, in chain order. */
-    private chainMemberIds(anchorId: string): string[] {
-        const members: string[] = [];
-        const visited = new SvelteSet<string>([anchorId]);
-        let cursor = this.chainTargetId(anchorId);
+    /** The node itself plus every transition reachable by following chain edges. */
+    private downstreamChainIds(startId: string): string[] {
+        const ids: string[] = [];
+        const visited = new SvelteSet<string>();
+        let cursor: string | null = startId;
 
         while (cursor && !visited.has(cursor)) {
-            members.push(cursor);
             visited.add(cursor);
+            ids.push(cursor);
             cursor = this.chainTargetId(cursor);
         }
 
-        return members;
+        return ids;
     }
 
-    /** Walks incoming chain edges back to the chain's first node. */
-    private chainAnchorId(nodeId: string): string {
-        let cursor = nodeId;
-        const visited = new SvelteSet<string>([nodeId]);
+    /** Claims a step and its downstream chain for a slide. */
+    private assignSlideIdDownstream(startId: string, slideId: string): void {
+        for (const id of this.downstreamChainIds(startId)) {
+            const node = this.findFlowNode(id);
 
-        for (;;) {
-            const incoming = this.flow.edges.find(
-                (edge) => edge.target === cursor,
-            );
-
-            if (!incoming || visited.has(incoming.source)) {
-                return cursor;
-            }
-
-            cursor = incoming.source;
-            visited.add(cursor);
-
-            if (this.findFlowNode(cursor)?.type === 'slide') {
-                return cursor;
+            if (node && node.type === 'transition') {
+                node.data.slideId = slideId;
             }
         }
-    }
-
-    /** Labels across the entire chain containing the node, minus excludeId. */
-    private chainLabelsThrough(
-        nodeId: string,
-        excludeId: string | null = null,
-    ): (string | null)[] {
-        const anchor =
-            this.findFlowNode(nodeId)?.type === 'slide'
-                ? nodeId
-                : this.chainAnchorId(nodeId);
-        const members =
-            this.findFlowNode(anchor)?.type === 'slide'
-                ? this.chainMemberIds(anchor)
-                : [anchor, ...this.chainMemberIds(anchor)];
-
-        return members
-            .filter((memberId) => memberId !== excludeId)
-            .map((memberId) => this.findFlowNode(memberId)?.data.label ?? null)
-            .filter((label) => label !== null && label !== '');
-    }
-
-    /** Labels of the node itself plus its downstream chain segment. */
-    private chainLabelsFrom(nodeId: string): (string | null)[] {
-        return [nodeId, ...this.chainMemberIds(nodeId)]
-            .map((memberId) => this.findFlowNode(memberId)?.data.label ?? null)
-            .filter((label) => label !== null && label !== '');
     }
 
     private slideContainingBlock(blockId: string): MutableSlide | null {
@@ -638,6 +855,18 @@ export class EditorState {
         this.dirty = true;
     }
 
+    /** Names the current slide; an empty title falls back to "Slide N". */
+    setSlideTitle(title: string | null): void {
+        const next = title && title.trim() !== '' ? title.trim() : null;
+
+        if (this.selectedSlide.title === next) {
+            return;
+        }
+
+        this.selectedSlide.title = next;
+        this.dirty = true;
+    }
+
     get backgroundImage(): string | null {
         return this.content.backgroundImage ?? null;
     }
@@ -703,11 +932,7 @@ export class EditorState {
         }
     }
 
-    addFreeBlock(
-        x: string,
-        y: string,
-        type: 'text' | 'code' | 'box',
-    ): void {
+    addFreeBlock(x: string, y: string, type: 'text' | 'code' | 'box'): void {
         const block = this.addBlock('main', type);
         block.style.x = x;
         block.style.y = y;
@@ -837,6 +1062,14 @@ export class EditorState {
         };
 
         const slide = this.selectedSlide;
+
+        // An empty slots map round-trips through the backend as a JSON [] and
+        // arrives here as an array; assigning a named slot key to it would be
+        // dropped by JSON.stringify on save. Normalise to a plain object first.
+        if (Array.isArray(slide.slots)) {
+            slide.slots = {};
+        }
+
         slide.slots[slot] = [...(slide.slots[slot] ?? []), block];
         this.selectedBlockId = block.id;
         this.dirty = true;

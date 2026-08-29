@@ -9,12 +9,13 @@ import type {
 import {
     compileFlow,
     defaultFlowFromContent,
+    enabledSlideIds,
     flattenFreeSteps,
     groupBlocksIntoSteps,
     migrateLegacyTransitions,
     stepIndexBySlide,
-    type StepIndex,
 } from './flow-compiler.ts';
+import type { StepIndex } from './flow-compiler.ts';
 import { FREE_DEFAULTS } from './free-drag.ts';
 import { layoutDefinitions } from './layouts.ts';
 
@@ -29,6 +30,14 @@ interface EditorJsOutput {
 
 const INDENT = '    ';
 
+// Animotion's theme ships `.reveal pre { font-size: 0.55em }` and its shiki CSS
+// adds no padding or radius, so an unstyled block renders as tiny raw monospace.
+// 1.4cqw reproduces the editor's proportion (14px on a ~1010px stage) against
+// the free stage's size container; !important beats the theme rule. :global()
+// because the <pre> lives inside the Code component, out of scoped-CSS reach.
+// The dark background is a fallback for when the theme doesn't inline one.
+const CODE_CSS = `${INDENT}:global(pre.shiki-magic-move-container) { margin: 0; padding: 1rem; border-radius: 0.5rem; background: #24292e; font-size: 1.4cqw !important; line-height: 1.6; overflow: auto; }`;
+
 const escapeHtml = (value: string): string =>
     value
         .replaceAll('&', '&amp;')
@@ -37,6 +46,15 @@ const escapeHtml = (value: string): string =>
 
 const escapeAttribute = (value: string): string =>
     escapeHtml(value).replaceAll('"', '&quot;');
+
+// Animotion's <Code> takes the source via a `code` prop, so it lands in a JS
+// template literal in the generated file, not as HTML text. Escape only what
+// would break the literal, leaving the code itself verbatim for the highlighter.
+const escapeTemplateLiteral = (value: string): string =>
+    value
+        .replaceAll('\\', '\\\\')
+        .replaceAll('`', '\\`')
+        .replaceAll('${', '\\${');
 
 const blockStyleAttribute = (block: Block): string => {
     const parts = [
@@ -109,9 +127,13 @@ const renderBlock = (block: Block, depth: number): string => {
         case 'richtext':
             return renderRichtextBlock(block, depth);
         case 'code':
-            return `${pad}<Code lang="${escapeAttribute(block.lang ?? 'text')}">${escapeHtml(block.content)}</Code>`;
+            return `${pad}<Code code={\`${escapeTemplateLiteral(block.content)}\`} lang="${escapeAttribute(block.lang ?? 'text')}" theme="github-dark" />`;
         case 'image':
-            return `${pad}<img src="${escapeAttribute(block.src ?? '')}" alt="${escapeAttribute(block.alt ?? '')}" />`;
+            // Inline style, not a class: the embed injects its CSS globally into
+            // the host page (shadow: 'none'), so a bare `img {}` rule would leak
+            // onto the host's own images. Mirrors Presenter.svelte's
+            // `max-h-full max-w-full object-contain`.
+            return `${pad}<img src="${escapeAttribute(block.src ?? '')}" alt="${escapeAttribute(block.alt ?? '')}" style="max-width: 100%; max-height: 100%; object-fit: contain;" />`;
         case 'box':
             return `${pad}<div class="box" style="${escapeAttribute([block.style.borderColor ? `border: 2px solid ${block.style.borderColor};` : '', block.style.backgroundColor ? `background: ${block.style.backgroundColor};` : ''].filter(Boolean).join(' '))}">${escapeHtml(block.content)}</div>`;
         default:
@@ -126,7 +148,7 @@ const freeBlockStyle = (block: Block): string => {
     const width = style.width ?? String(FREE_DEFAULTS.width);
     const parts = [`left: ${x}%;`, `top: ${y}%;`, `width: ${width}%;`];
 
-    if (style.height !== null) {
+    if (style.height != null) {
         parts.push(`height: ${style.height}%;`);
     }
 
@@ -152,7 +174,9 @@ const renderFreeSlot = (
         );
 
         if (order !== null) {
-            lines.push(`${INDENT.repeat(inner + 1)}<Transition order={${order}}>`);
+            lines.push(
+                `${INDENT.repeat(inner + 1)}<Transition order={${order}}>`,
+            );
             lines.push(renderBlock(block, inner + 2));
             lines.push(`${INDENT.repeat(inner + 1)}</Transition>`);
         } else {
@@ -264,7 +288,11 @@ const layoutCss = (content: PresentationContent): string => {
             '.layout-grid-2x3 { display: grid; height: 100%; grid-template-columns: repeat(3, 1fr); grid-template-rows: 1fr 1fr; gap: 1rem; }',
         'custom-grid':
             '.layout-custom-grid { display: grid; height: 100%; gap: 0.25rem; }',
-        free: '.layout-free { position: relative; height: 100%; } .free-stage { position: relative; width: 100%; aspect-ratio: 16 / 9; margin: 0 auto; text-align: left; } .free-stage .free-block { position: absolute; }',
+        // Reveal runs with disableLayout, so the stage must fit itself into the
+        // slide area. Sizing the 16:9 stage to min(container width, container
+        // height * 16/9) keeps it letterboxed and centered on any screen shape
+        // instead of stretching or overflowing on very wide or short displays.
+        free: '.layout-free { position: relative; height: 100%; display: flex; align-items: center; justify-content: center; container-type: size; } .free-stage { position: relative; width: min(100cqw, calc(100cqh * 16 / 9)); aspect-ratio: 16 / 9; text-align: left; } .free-stage .free-block { position: absolute; }',
         'rich-text':
             '.layout-rich-text { height: 100%; overflow-y: auto; padding: 2rem; } .layout-rich-text h1 { font-size: 2rem; font-weight: 700; } .layout-rich-text h2 { font-size: 1.5rem; font-weight: 600; } .layout-rich-text h3 { font-size: 1.25rem; font-weight: 600; } .layout-rich-text ul, .layout-rich-text ol { padding-left: 1.5rem; list-style: revert; } .layout-rich-text blockquote { border-left: 3px solid currentColor; padding-left: 1rem; } .layout-rich-text pre { background: #1e2030; color: #cdd6f4; border-radius: 0.375rem; padding: 0.75rem; } .layout-rich-text .box { border: 2px solid; border-radius: 0.375rem; padding: 1rem; }',
     };
@@ -304,13 +332,18 @@ export function generatePresentationSvelte(
     const deck = compileFlow(flow, content);
     const stepsBySlideId = stepIndexBySlide(deck);
 
-    const usesCode = content.slides.some((slide) =>
+    // Disabled slides (no incoming nav edge, not the entry) are dropped from the
+    // built deck entirely — they never reach the audience.
+    const enabled = enabledSlideIds(content, flow);
+    const shownSlides = content.slides.filter((slide) => enabled.has(slide.id));
+
+    const usesCode = shownSlides.some((slide) =>
         Object.values(slide.slots).some((blocks) =>
             blocks.some((block) => block.type === 'code'),
         ),
     );
 
-    const usesTransition = content.slides.some((slide) =>
+    const usesTransition = shownSlides.some((slide) =>
         Object.values(slide.slots).some((blocks) =>
             blocks.some(
                 (block) =>
@@ -327,7 +360,7 @@ export function generatePresentationSvelte(
         ...(usesCode ? ['Code'] : []),
     ].join(', ');
 
-    const slides = content.slides
+    const slides = shownSlides
         .map((slide) =>
             renderSlide(
                 slide,
@@ -346,7 +379,7 @@ ${slides}
 </Presentation>
 
 <style>
-${layoutCss(content)}
+${layoutCss(content)}${usesCode ? `\n${CODE_CSS}` : ''}
 </style>
 `;
 }

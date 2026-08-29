@@ -6,6 +6,8 @@
     let { data, selected }: NodeProps = $props();
 
     const index = $derived(data.index as number);
+    const title = $derived((data.title as string | null) ?? null);
+    const enabled = $derived((data.enabled as boolean | undefined) ?? true);
     const excerpt = $derived(data.excerpt as string);
     const onOpen = $derived(data.onOpen as () => void);
 </script>
@@ -14,9 +16,10 @@
 <div
     class="w-48 rounded-lg border-2 bg-card p-3 shadow-sm transition-colors {selected
         ? 'border-primary'
-        : 'border-border'}"
+        : 'border-border'} {enabled ? '' : 'border-dashed opacity-45'}"
     ondblclick={onOpen}
     data-test="flow-slide-node"
+    data-disabled={!enabled}
 >
     <Handle type="target" position={Position.Top} />
 
@@ -24,7 +27,7 @@
         class="flex items-center gap-1.5 text-xs font-medium text-muted-foreground"
     >
         <Presentation class="h-3.5 w-3.5" />
-        Slide {index + 1}
+        {title ?? `Slide ${index + 1}`}
     </div>
 
     {#if excerpt}

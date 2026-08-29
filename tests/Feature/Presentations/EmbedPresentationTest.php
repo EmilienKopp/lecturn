@@ -55,7 +55,7 @@ test('saving content regenerates an existing embed file', function () {
                 'slides' => [
                     [
                         'id' => 'slide-1',
-                        'layout' => 'center',
+                        'layout' => 'free',
                         'background' => null,
                         'slots' => [
                             'main' => [
@@ -63,7 +63,7 @@ test('saving content regenerates an existing embed file', function () {
                                     'id' => 'block-1',
                                     'type' => 'text',
                                     'content' => 'Regenerated embed marker',
-                                    'style' => [],
+                                    'style' => ['x' => '10', 'y' => '20', 'width' => '30'],
                                     'transition' => null,
                                 ],
                             ],

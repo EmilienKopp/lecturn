@@ -1,13 +1,15 @@
+import { bunny } from 'laravel-vite-plugin/fonts';
+import { defineConfig } from 'vite';
+import { fileURLToPath } from 'node:url';
 import inertia from '@inertiajs/vite';
-import { wayfinder } from '@laravel/vite-plugin-wayfinder';
+import laravel from 'laravel-vite-plugin';
 import { svelte } from '@sveltejs/vite-plugin-svelte';
 import tailwindcss from '@tailwindcss/vite';
-import laravel from 'laravel-vite-plugin';
-import { bunny } from 'laravel-vite-plugin/fonts';
-import { fileURLToPath } from 'node:url';
-import { defineConfig } from 'vite';
+import { wayfinder } from '@laravel/vite-plugin-wayfinder';
 
-const isSvelteCheck = process.argv.some((argument) => argument.includes('svelte-check'));
+const isSvelteCheck = process.argv.some((argument) =>
+    argument.includes('svelte-check'),
+);
 
 if (isSvelteCheck) {
     process.env.LARAVEL_BYPASS_ENV_CHECK ??= '1';
@@ -65,4 +67,16 @@ export default defineConfig({
             formVariants: true,
         }),
     ],
+
+    // exclude from hmr
+    server: {
+        watch: {
+            ignored: [
+                '**/node_modules/**',
+                '**/vendor/**',
+                '**/public/**',
+                '.demo/**',
+            ],
+        },
+    },
 });

@@ -98,6 +98,7 @@ readonly layout: SlideLayout,
 readonly background: string | null,
 readonly slots: Record<string, Block[]>,
 readonly config: Record<string, any> | null,
+readonly title: string | null,
 };
 export type SlideLayout = 'full' | 'center' | 'top-main' | 'top-main-footer' | 'left-right' | 'left-wide-right' | 'grid-2x2' | 'grid-2x3' | 'custom-grid' | 'rich-text' | 'free';
 export type TalkSettings = {

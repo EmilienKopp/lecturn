@@ -71,7 +71,11 @@
     }
 
     function createBlock(type: 'text' | 'code' | 'box') {
-        editor.addFreeBlock(String(round2(popover.x)), String(round2(popover.y)), type);
+        editor.addFreeBlock(
+            String(round2(popover.x)),
+            String(round2(popover.y)),
+            type,
+        );
         popoverVisible = false;
     }
 
@@ -138,7 +142,9 @@
             container: canvasEl,
             onMove: (dx, dy) => {
                 editor.updateBlockStyle(block.id, {
-                    x: String(round2(clampPercent(startX + dx, 0, 100 - width))),
+                    x: String(
+                        round2(clampPercent(startX + dx, 0, 100 - width)),
+                    ),
                     y: String(round2(clampPercent(startY + dy, 0, 95))),
                 });
             },
@@ -227,7 +233,9 @@
                     onpointerdown={(e) => startMove(e, block)}
                     title="Drag to move"
                 >
-                    <div class="h-0.5 w-6 rounded bg-primary-foreground/70"></div>
+                    <div
+                        class="h-0.5 w-6 rounded bg-primary-foreground/70"
+                    ></div>
                 </div>
             {/if}
 
@@ -268,7 +276,7 @@
 
     {#if popoverVisible}
         <div
-            class="absolute z-50 flex gap-1 rounded-md border bg-popover p-1 shadow-md"
+            class="absolute z-50 flex gap-1 rounded-md border bg-popover p-1 text-popover-foreground shadow-md"
             style="top: {popover.top}px; left: {popover.left}px;"
             onclick={(e) => e.stopPropagation()}
         >

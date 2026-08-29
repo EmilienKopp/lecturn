@@ -135,6 +135,40 @@ test('presentation content can be saved', function () {
     expect($stored->content['slides'][0]['slots']['left'][0]['content'])->toBe('Hello world');
 });
 
+test('a slide title, background and config survive a save', function () {
+    $user = User::factory()->create();
+    $presentation = PresentationModel::factory()->create(['team_id' => $user->currentTeam->id]);
+
+    $content = [
+        'version' => '1.0',
+        'slides' => [
+            [
+                'id' => 'slide-1',
+                'layout' => 'free',
+                'background' => '#0f0f0f',
+                'title' => 'Introduction',
+                'config' => ['rows' => 3, 'cols' => 3],
+                'slots' => ['main' => []],
+            ],
+        ],
+    ];
+
+    $this
+        ->actingAs($user)
+        ->put(route('presentations.update', [
+            'current_team' => $user->currentTeam->slug,
+            'presentation' => $presentation->id,
+        ]), ['content' => $content])
+        ->assertRedirect()
+        ->assertSessionHasNoErrors();
+
+    $slide = PresentationModel::findOrFail($presentation->id)->content['slides'][0];
+
+    expect($slide['title'])->toBe('Introduction')
+        ->and($slide['background'])->toBe('#0f0f0f')
+        ->and($slide['config'])->toBe(['rows' => 3, 'cols' => 3]);
+});
+
 test('a free-layout slide with positioned blocks can be saved', function () {
     $user = User::factory()->create();
     $presentation = PresentationModel::factory()->create(['team_id' => $user->currentTeam->id]);

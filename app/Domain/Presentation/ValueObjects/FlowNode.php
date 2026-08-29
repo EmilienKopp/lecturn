@@ -9,7 +9,9 @@ use App\Domain\Presentation\Exceptions\InvalidFlowGraph;
 readonly class FlowNode
 {
     /**
-     * @param  array{slideId?: string, label?: string|null}  $data
+     * @param  array{slideId?: string, label?: string|null}  $data  Slide nodes
+     *                                                              carry `slideId`; transition nodes carry an optional `label` and,
+     *                                                              once assigned, the `slideId` of the slide that owns the step.
      */
     public function __construct(
         public string $id,
@@ -34,6 +36,14 @@ readonly class FlowNode
 
             if ($label !== null && ! is_string($label)) {
                 throw new InvalidFlowGraph("Transition node \"{$this->id}\" label must be a string or null.");
+            }
+
+            // A transition node belongs to a slide through a stable slideId,
+            // not through edges — so a step keeps its identity when unwired.
+            $slideId = $this->data['slideId'] ?? null;
+
+            if ($slideId !== null && (! is_string($slideId) || $slideId === '')) {
+                throw new InvalidFlowGraph("Transition node \"{$this->id}\" slideId must be a non-empty string.");
             }
         }
     }

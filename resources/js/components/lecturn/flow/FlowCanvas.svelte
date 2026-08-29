@@ -63,6 +63,12 @@
                     node.type === 'slide'
                         ? {
                               index: slideIndex,
+                              title:
+                                  editor.content.slides[slideIndex]?.title ??
+                                  null,
+                              enabled: node.data.slideId
+                                  ? editor.isSlideEnabled(node.data.slideId)
+                                  : true,
                               excerpt: slideExcerpt(node.data.slideId),
                               onOpen: () => onOpenSlide(slideIndex),
                           }
@@ -79,7 +85,7 @@
                                       !editor.setTransitionLabel(nodeId, label)
                                   ) {
                                       toast.error(
-                                          'Another transition in this chain already has that name.',
+                                          'Another step on this slide already has that name.',
                                       );
                                   }
                               },

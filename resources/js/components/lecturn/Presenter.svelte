@@ -1,9 +1,10 @@
 <script lang="ts">
-    import { Presentation, Slide, Transition } from '@animotion/core';
+    import { Code, Presentation, Slide, Transition } from '@animotion/core';
     import '@animotion/core/theme';
     import {
         compileFlow,
         defaultFlowFromContent,
+        enabledSlideIds,
         flattenFreeSteps,
         groupBlocksIntoSteps,
         migrateLegacyTransitions,
@@ -42,6 +43,14 @@
     const stepsBySlideId = $derived(
         stepIndexBySlide(compileFlow(compiled.flow, content)),
     );
+    // Disabled slides never reach the audience, mirroring the exported deck.
+    const shownSlides = $derived(
+        (() => {
+            const enabled = enabledSlideIds(content, compiled.flow);
+
+            return content.slides.filter((slide) => enabled.has(slide.id));
+        })(),
+    );
 
     const blockStyle = (block: Block): string =>
         [
@@ -73,7 +82,7 @@
             `width: ${block.style.width ?? FREE_DEFAULTS.width}%;`,
         ];
 
-        if (block.style.height !== null) {
+        if (block.style.height != null) {
             parts.push(`height: ${block.style.height}%;`);
         }
 
@@ -87,7 +96,20 @@
             {block.content}
         </p>
     {:else if block.type === 'code'}
-        <pre><code>{block.content}</code></pre>
+        <!-- Animotion's theme ships `.reveal pre { font-size: 0.55em }` and its
+             shiki CSS adds no padding or radius, so an unstyled block renders
+             as tiny raw monospace. The stage is a size container, so 1.4cqw
+             reproduces the editor's proportion (14px on a ~1010px stage) at any
+             screen size; the ! beats the theme rule. -->
+        <div
+            class="[&_pre]:m-0 [&_pre]:overflow-auto [&_pre]:rounded-lg [&_pre]:bg-[#24292e] [&_pre]:p-4 [&_pre]:text-[1.4cqw]! [&_pre]:leading-relaxed"
+        >
+            <Code
+                code={block.content}
+                lang={block.lang ?? 'text'}
+                theme="github-dark"
+            />
+        </div>
     {:else if block.type === 'image'}
         <img
             src={block.src ?? ''}
@@ -105,7 +127,7 @@
             progress: true,
         }}
     >
-        {#each content.slides as slide (slide.id)}
+        {#each shownSlides as slide (slide.id)}
             <Slide
                 background={slide.background ??
                     (content.backgroundImage ? undefined : '#ffffff')}
@@ -115,50 +137,56 @@
                 class="h-full w-full"
             >
                 {#if slide.layout === 'free'}
+                    <!-- Fit the 16:9 stage inside the slide area (letterbox)
+                         so it never stretches or overflows on odd screen sizes. -->
                     <div
-                        class="relative mx-auto w-full"
-                        style="aspect-ratio: 16 / 9; color: #1a1a1a; text-align: left;"
+                        class="flex h-full w-full items-center justify-center [container-type:size]"
                     >
-                        {#each freeSteps(slide) as { block, order } (block.id)}
-                            <div
-                                class="absolute"
-                                style={freeBlockStyle(block)}
-                            >
-                                {#if order !== null}
-                                    <Transition {order}>
+                        <div
+                            class="relative"
+                            style="width: min(100cqw, calc(100cqh * 16 / 9)); aspect-ratio: 16 / 9; color: #1a1a1a; text-align: left;"
+                        >
+                            {#each freeSteps(slide) as { block, order } (block.id)}
+                                <div
+                                    class="absolute"
+                                    style={freeBlockStyle(block)}
+                                >
+                                    {#if order !== null}
+                                        <Transition {order}>
+                                            {@render blockView(block)}
+                                        </Transition>
+                                    {:else}
                                         {@render blockView(block)}
-                                    </Transition>
-                                {:else}
+                                    {/if}
+                                </div>
+                            {/each}
+                        </div>
+                    </div>
+                {:else}
+                    <div
+                        class="{layoutDefinitions[slide.layout]
+                            .containerClass} h-full p-12"
+                        style="color: #1a1a1a"
+                    >
+                        {#each layoutDefinitions[slide.layout].slots as slotName (slotName)}
+                            {@const { staticBlocks, stepGroups } = slotSteps(
+                                slide,
+                                slotName,
+                            )}
+                            <div class="flex min-h-0 flex-col gap-4">
+                                {#each staticBlocks as block (block.id)}
                                     {@render blockView(block)}
-                                {/if}
+                                {/each}
+                                {#each stepGroups as group (group.order)}
+                                    <Transition order={group.order}>
+                                        {#each group.blocks as block (block.id)}
+                                            {@render blockView(block)}
+                                        {/each}
+                                    </Transition>
+                                {/each}
                             </div>
                         {/each}
                     </div>
-                {:else}
-                <div
-                    class="{layoutDefinitions[slide.layout]
-                        .containerClass} h-full p-12"
-                    style="color: #1a1a1a"
-                >
-                    {#each layoutDefinitions[slide.layout].slots as slotName (slotName)}
-                        {@const { staticBlocks, stepGroups } = slotSteps(
-                            slide,
-                            slotName,
-                        )}
-                        <div class="flex min-h-0 flex-col gap-4">
-                            {#each staticBlocks as block (block.id)}
-                                {@render blockView(block)}
-                            {/each}
-                            {#each stepGroups as group (group.order)}
-                                <Transition order={group.order}>
-                                    {#each group.blocks as block (block.id)}
-                                        {@render blockView(block)}
-                                    {/each}
-                                </Transition>
-                            {/each}
-                        </div>
-                    {/each}
-                </div>
                 {/if}
             </Slide>
         {/each}

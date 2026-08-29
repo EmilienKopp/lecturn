@@ -47,6 +47,18 @@ it('round-trips a valid document through fromArray and toArray', function () {
     expect($content->toArray())->toEqual(validContentArray());
 });
 
+it('serializes a slide with no slots as a JSON object, not an array', function () {
+    $data = validContentArray();
+    $data['slides'][0]['slots'] = [];
+
+    $json = json_encode(PresentationContent::fromArray($data)->toArray());
+
+    // An empty map must stay {} so the frontend keeps writing named slot keys;
+    // a [] would arrive as an array and drop the first block added on save.
+    expect($json)->toContain('"slots":{}')
+        ->and($json)->not->toContain('"slots":[]');
+});
+
 it('rejects an unknown layout', function () {
     $data = validContentArray();
     $data['slides'][0]['layout'] = 'diagonal';
@@ -134,6 +146,33 @@ it('omits the background image key when none is set', function () {
 
     expect($content->backgroundImage)->toBeNull()
         ->and($content->toArray())->not->toHaveKey('backgroundImage');
+});
+
+it('round-trips a slide title', function () {
+    $data = validContentArray();
+    $data['slides'][0]['title'] = 'Introduction';
+
+    $content = PresentationContent::fromArray($data);
+
+    expect($content->slides[0]->title)->toBe('Introduction')
+        ->and($content->toArray())->toEqual($data);
+});
+
+it('omits the title key when the slide is untitled', function () {
+    $content = PresentationContent::fromArray(validContentArray());
+
+    expect($content->slides[0]->title)->toBeNull()
+        ->and($content->toArray()['slides'][0])->not->toHaveKey('title');
+});
+
+it('treats an empty-string title as untitled', function () {
+    $data = validContentArray();
+    $data['slides'][0]['title'] = '';
+
+    $content = PresentationContent::fromArray($data);
+
+    expect($content->slides[0]->title)->toBeNull()
+        ->and($content->toArray()['slides'][0])->not->toHaveKey('title');
 });
 
 it('exposes a single main slot for the free layout', function () {

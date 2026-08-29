@@ -30,6 +30,11 @@ class UpdatePresentationRequest extends FormRequest
             'content.slides' => ['required_with:content', 'array'],
             'content.slides.*.id' => ['required', 'string'],
             'content.slides.*.layout' => ['required', Rule::enum(SlideLayout::class)],
+            // Optional slide fields need a rule or validated() prunes them,
+            // silently dropping the title/background/config on save.
+            'content.slides.*.title' => ['sometimes', 'nullable', 'string'],
+            'content.slides.*.background' => ['sometimes', 'nullable', 'string'],
+            'content.slides.*.config' => ['sometimes', 'nullable', 'array'],
             'content.slides.*.slots' => ['sometimes', 'array'],
             'flow' => ['sometimes', 'array'],
             'flow.version' => ['required_with:flow', Rule::in([FlowGraph::VERSION])],

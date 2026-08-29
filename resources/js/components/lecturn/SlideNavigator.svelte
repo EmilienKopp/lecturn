@@ -3,7 +3,6 @@
     import Trash2 from 'lucide-svelte/icons/trash-2';
     import { Button } from '@/components/ui/button';
     import type { EditorState } from '@/lib/lecturn/editor-state.svelte';
-    import { layoutDefinitions } from '@/lib/lecturn/layouts';
 
     let { editor }: { editor: EditorState } = $props();
 </script>
@@ -11,19 +10,27 @@
 <div class="flex h-full w-48 flex-col border-r">
     <div class="flex-1 space-y-2 overflow-y-auto p-3">
         {#each editor.content.slides as slide, index (slide.id)}
+            {@const disabled = !editor.isSlideEnabled(slide.id)}
             <button
                 type="button"
                 class="group relative block w-full rounded-md border p-2 text-left text-sm transition-colors hover:bg-accent {index ===
                 editor.selectedSlideIndex
                     ? 'border-primary bg-accent'
-                    : ''}"
+                    : ''} {disabled ? 'opacity-45' : ''}"
                 onclick={() => editor.selectSlide(index)}
                 data-test="slide-navigator-item"
+                data-disabled={disabled}
             >
-                <span class="font-medium">Slide {index + 1}</span>
-                <span class="block text-xs text-muted-foreground">
-                    {layoutDefinitions[slide.layout].label}
-                </span>
+                <span class="block truncate pr-5 font-medium"
+                    >{slide.title ?? `Slide ${index + 1}`}</span
+                >
+
+                {#if disabled}
+                    <span
+                        class="mt-0.5 block text-[10px] font-medium tracking-wide text-muted-foreground uppercase"
+                        >Disabled</span
+                    >
+                {/if}
 
                 {#if editor.content.slides.length > 1}
                     <span

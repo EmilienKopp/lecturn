@@ -1,6 +1,5 @@
 import type {
     Block,
-    FlowEdge,
     FlowGraph,
     FlowNode,
     PresentationContent,
@@ -25,9 +24,134 @@ export type CompiledDeck = {
 };
 
 /**
- * Walks the two-lane flow graph into the shape Animotion renders: for each
- * slide (in content order), the ordered <Transition> chain hanging off its
- * node, and the navigation edge target for future branch-aware playback.
+ * A slide's reveal steps in order. A transition node belongs to a slide
+ * through its stable `data.slideId`, never through edge reachability, so a step
+ * keeps its identity (id, label, block pins) no matter what happens to edges.
+ * Chain edges (transition→transition) impose explicit order where present;
+ * steps left unwired fall back to their canvas position (top-to-bottom, then
+ * left-to-right). This is the single source of truth for step order, shared by
+ * the editor and the codegen.
+ */
+export function transitionsForSlide(
+    flow: FlowGraph,
+    slideId: string,
+): CompiledTransition[] {
+    const owned = flow.nodes.filter(
+        (node) => node.type === 'transition' && node.data.slideId === slideId,
+    );
+
+    if (owned.length === 0) {
+        return [];
+    }
+
+    const ownedIds = new Set(owned.map((node) => node.id));
+    const nextOf = new Map<string, string>();
+    const hasIncoming = new Set<string>();
+
+    for (const edge of flow.edges) {
+        if (ownedIds.has(edge.source) && ownedIds.has(edge.target)) {
+            nextOf.set(edge.source, edge.target);
+            hasIncoming.add(edge.target);
+        }
+    }
+
+    const positionOf = new Map(owned.map((node) => [node.id, node.position]));
+    const labelOf = new Map(
+        owned.map((node) => [node.id, node.data.label ?? null]),
+    );
+    const byPosition = (a: string, b: string): number => {
+        const pa = positionOf.get(a)!;
+        const pb = positionOf.get(b)!;
+
+        return pa.y - pb.y || pa.x - pb.x || a.localeCompare(b);
+    };
+
+    const ordered: CompiledTransition[] = [];
+    const visited = new Set<string>();
+    const emit = (id: string): void => {
+        visited.add(id);
+        ordered.push({ nodeId: id, label: labelOf.get(id) ?? null });
+    };
+
+    // A chain head is a step no other step points at; its whole chain follows
+    // it. Heads (and singletons) are laid out by canvas position.
+    const heads = owned
+        .map((node) => node.id)
+        .filter((id) => !hasIncoming.has(id))
+        .sort(byPosition);
+
+    for (const head of heads) {
+        let cursor: string | undefined = head;
+
+        while (cursor && ownedIds.has(cursor) && !visited.has(cursor)) {
+            emit(cursor);
+            cursor = nextOf.get(cursor);
+        }
+    }
+
+    // Any step trapped in a cycle has no head; surface it anyway, by position.
+    for (const id of owned.map((node) => node.id).sort(byPosition)) {
+        if (!visited.has(id)) {
+            emit(id);
+        }
+    }
+
+    return ordered;
+}
+
+/**
+ * The slides that are part of the show. A navigation edge is a slide→slide
+ * link; a slide is enabled when it is the entry (first in content order) or has
+ * at least one incoming navigation edge. As a backward-compatibility rule, a
+ * deck with no navigation edges at all is treated as fully enabled — that keeps
+ * legacy and freshly-created decks (which wire nothing) playing every slide
+ * until the author starts using the nav chain. Shared by the editor, the
+ * Presenter, and the codegen so all three agree on what is shown.
+ */
+export function enabledSlideIds(
+    content: PresentationContent,
+    flow: FlowGraph,
+): Set<string> {
+    const slideNodeIds = new Set(
+        flow.nodes
+            .filter((node) => node.type === 'slide')
+            .map((node) => node.id),
+    );
+    const nodesById = new Map(flow.nodes.map((node) => [node.id, node]));
+    const navEdges = flow.edges.filter(
+        (edge) =>
+            slideNodeIds.has(edge.source) && slideNodeIds.has(edge.target),
+    );
+
+    if (navEdges.length === 0) {
+        return new Set(content.slides.map((slide) => slide.id));
+    }
+
+    const withIncoming = new Set<string>();
+
+    for (const edge of navEdges) {
+        const targetSlideId = nodesById.get(edge.target)?.data.slideId;
+
+        if (targetSlideId) {
+            withIncoming.add(targetSlideId);
+        }
+    }
+
+    const enabled = new Set<string>();
+
+    content.slides.forEach((slide, index) => {
+        if (index === 0 || withIncoming.has(slide.id)) {
+            enabled.add(slide.id);
+        }
+    });
+
+    return enabled;
+}
+
+/**
+ * Walks the flow graph into the shape Animotion renders: for each slide (in
+ * content order), its ordered reveal steps and the navigation edge target for
+ * future branch-aware playback.
  */
 export function compileFlow(
     flow: FlowGraph,
@@ -44,26 +168,11 @@ export function compileFlow(
         }
     }
 
-    const outgoingBySource = new Map<string, FlowEdge[]>();
-
-    for (const edge of flow.edges) {
-        const existing = outgoingBySource.get(edge.source) ?? [];
-        outgoingBySource.set(edge.source, [...existing, edge]);
-    }
-
-    const chainTarget = (sourceId: string): FlowNode | null => {
-        const edges = outgoingBySource.get(sourceId) ?? [];
-        const chainEdge = edges.find(
-            (edge) => nodesById.get(edge.target)?.type === 'transition',
-        );
-
-        return chainEdge ? (nodesById.get(chainEdge.target) ?? null) : null;
-    };
-
     const navTarget = (sourceId: string): string | null => {
-        const edges = outgoingBySource.get(sourceId) ?? [];
-        const navEdge = edges.find(
-            (edge) => nodesById.get(edge.target)?.type === 'slide',
+        const navEdge = flow.edges.find(
+            (edge) =>
+                edge.source === sourceId &&
+                nodesById.get(edge.target)?.type === 'slide',
         );
         const target = navEdge ? nodesById.get(navEdge.target) : null;
 
@@ -72,24 +181,11 @@ export function compileFlow(
 
     const slides = content.slides.map((slide): CompiledSlide => {
         const node = nodesBySlideId.get(slide.id) ?? null;
-        const transitions: CompiledTransition[] = [];
-
-        if (node) {
-            let cursor = chainTarget(node.id);
-
-            while (cursor && transitions.length <= flow.nodes.length) {
-                transitions.push({
-                    nodeId: cursor.id,
-                    label: cursor.data.label ?? null,
-                });
-                cursor = chainTarget(cursor.id);
-            }
-        }
 
         return {
             slide,
             nodeId: node?.id ?? null,
-            transitions,
+            transitions: transitionsForSlide(flow, slide.id),
             nextSlideId: node ? navTarget(node.id) : null,
         };
     });
@@ -166,7 +262,10 @@ export type FreeStep = {
  * while resolving each block's reveal step via the same step index. Blocks
  * pinned to the same node share an order and reveal together.
  */
-export function flattenFreeSteps(blocks: Block[], steps: StepIndex): FreeStep[] {
+export function flattenFreeSteps(
+    blocks: Block[],
+    steps: StepIndex,
+): FreeStep[] {
     return blocks.map((block) => ({
         block,
         order:
@@ -214,6 +313,33 @@ export function migrateLegacyTransitions(
     for (const edge of nextFlow.edges) {
         if (nodesById.get(edge.target)?.type === 'transition') {
             chainTargetBySource.set(edge.source, edge.target);
+        }
+    }
+
+    // Ownership backfill: transition nodes built in the flow view before
+    // `data.slideId` existed carry no owner. Whatever a slide's edge-chain
+    // reaches today is claimed by that slide, so old graphs keep their steps
+    // after the identity model change.
+    for (const node of nextFlow.nodes) {
+        if (node.type !== 'slide' || !node.data.slideId) {
+            continue;
+        }
+
+        let cursor = chainTargetBySource.get(node.id);
+        const seen = new Set<string>();
+
+        while (cursor && !seen.has(cursor)) {
+            seen.add(cursor);
+            const transition = nodesById.get(cursor);
+
+            if (
+                transition?.type === 'transition' &&
+                transition.data.slideId == null
+            ) {
+                transition.data.slideId = node.data.slideId;
+            }
+
+            cursor = chainTargetBySource.get(cursor);
         }
     }
 
@@ -277,7 +403,7 @@ export function migrateLegacyTransitions(
                     x: slideNode.position.x + 260,
                     y: slideNode.position.y + index * 80,
                 },
-                data: { label: null },
+                data: { label: null, slideId: slide.id },
             };
 
             nextFlow.nodes.push(node);

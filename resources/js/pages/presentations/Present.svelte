@@ -58,10 +58,14 @@
 <div class="flex h-screen w-screen overflow-hidden bg-black">
     <!-- Slide column -->
     <div
-        class="relative flex flex-1 flex-col items-center justify-center bg-black"
+        class="relative flex flex-1 flex-col items-center justify-center overflow-hidden bg-black [container-type:size]"
     >
-        <!-- 16:9 constrained slide box -->
-        <div class="w-full" style="aspect-ratio: 16/9; max-height: 100vh;">
+        <!-- The slide box is the largest 16:9 that fits the column on both
+             axes, centered, so wide screens letterbox with black around it
+             instead of the slide stretching to fill. -->
+        <div
+            style="width: min(100cqw, calc(100cqh * 16 / 9)); aspect-ratio: 16 / 9;"
+        >
             <Presenter
                 content={presentation.content}
                 flow={presentation.flow}

@@ -1,5 +1,7 @@
 <script lang="ts">
     import { page } from '@inertiajs/svelte';
+    import Eye from 'lucide-svelte/icons/eye';
+    import EyeOff from 'lucide-svelte/icons/eye-off';
     import Trash2 from 'lucide-svelte/icons/trash-2';
     import { toast } from 'svelte-sonner';
     import DeletePresentationBackgroundController from '@/actions/App/Http/Controllers/Presentations/DeletePresentationBackgroundController';
@@ -83,6 +85,17 @@
     const transitions = $derived(
         editor.transitionsForSlide(editor.selectedSlide.id),
     );
+    const pinnedTransition = $derived(
+        transitions.find(
+            (transition) => transition.nodeId === block?.transition?.nodeId,
+        ) ?? null,
+    );
+
+    const renameTransition = (nodeId: string, value: string) => {
+        if (!editor.setTransitionLabel(nodeId, value.trim() || null)) {
+            toast.error('Another step on this slide already has that name.');
+        }
+    };
 
     const setTransition = (blockId: string, value: string) => {
         if (value === '__new__') {
@@ -123,6 +136,27 @@
                     <option value="__new__">+ New step</option>
                 </select>
             </div>
+
+            {#if pinnedTransition}
+                <div class="space-y-1">
+                    <Label for="transition-label" class="text-xs"
+                        >Step name</Label
+                    >
+                    <input
+                        id="transition-label"
+                        type="text"
+                        class="w-full rounded-md border bg-background px-2 py-1.5 text-sm"
+                        placeholder="Step {pinnedTransition.index + 1}"
+                        value={pinnedTransition.label ?? ''}
+                        onchange={(event) =>
+                            renameTransition(
+                                pinnedTransition.nodeId,
+                                event.currentTarget.value,
+                            )}
+                        data-test="inspector-transition-label"
+                    />
+                </div>
+            {/if}
         {/if}
 
         {#if block.type === 'code'}
@@ -152,7 +186,10 @@
                     class="w-full rounded-md border bg-background px-2 py-1.5 text-sm"
                     value={block.alt ?? ''}
                     oninput={(event) =>
-                        editor.updateBlockAlt(block.id, event.currentTarget.value)}
+                        editor.updateBlockAlt(
+                            block.id,
+                            event.currentTarget.value,
+                        )}
                     data-test="inspector-alt"
                 />
             </div>
@@ -258,6 +295,50 @@
             <Trash2 class="h-4 w-4" /> Delete block
         </Button>
     {:else}
+        <div class="space-y-1">
+            <Label for="slide-title" class="text-xs">Slide title</Label>
+            <input
+                id="slide-title"
+                type="text"
+                class="h-8 w-full rounded-md border bg-background px-2 text-sm outline-none focus-visible:ring-1 focus-visible:ring-ring"
+                placeholder="Slide {editor.selectedSlideIndex + 1}"
+                value={editor.selectedSlide.title ?? ''}
+                onchange={(event) =>
+                    editor.setSlideTitle(event.currentTarget.value)}
+                data-test="inspector-slide-title"
+            />
+        </div>
+
+        {#if editor.isEntrySlide(editor.selectedSlide.id)}
+            <p class="text-xs text-muted-foreground">
+                Entry slide (always shown).
+            </p>
+        {:else}
+            {@const enabled = editor.isSlideEnabled(editor.selectedSlide.id)}
+            <div class="space-y-1">
+                <Button
+                    variant={enabled ? 'outline' : 'default'}
+                    size="sm"
+                    class="w-full"
+                    onclick={() =>
+                        editor.toggleSlideEnabled(editor.selectedSlideIndex)}
+                    data-test="inspector-toggle-slide"
+                >
+                    {#if enabled}
+                        <EyeOff class="h-4 w-4" /> Disable slide
+                    {:else}
+                        <Eye class="h-4 w-4" /> Enable slide
+                    {/if}
+                </Button>
+                {#if !enabled}
+                    <p class="text-xs text-muted-foreground">
+                        Hidden when presenting. Enabling re-links it into the
+                        flow by its order.
+                    </p>
+                {/if}
+            </div>
+        {/if}
+
         <LayoutPicker {editor} />
 
         <div class="space-y-1">
@@ -321,7 +402,8 @@
                 </Button>
             {/if}
             <p class="text-[11px] text-muted-foreground">
-                Shows behind every slide that has no background color of its own.
+                Shows behind every slide that has no background color of its
+                own.
             </p>
         </div>
 

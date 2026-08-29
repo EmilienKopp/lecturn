@@ -102,7 +102,7 @@ test('a deck background image is exported onto slides without their own color', 
             'slides' => [
                 [
                     'id' => 'slide-1',
-                    'layout' => 'center',
+                    'layout' => 'free',
                     'background' => null,
                     'slots' => [],
                 ],
