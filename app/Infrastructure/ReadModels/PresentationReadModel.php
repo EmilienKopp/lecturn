@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Infrastructure\ReadModels;
 
+use App\Domain\Presentation\ValueObjects\TalkSettings;
 use App\Models\Views\PresentationsView;
 
 class PresentationReadModel
@@ -27,7 +28,7 @@ class PresentationReadModel
     }
 
     /**
-     * @return array{embed_token: string, content: array<string, mixed>}
+     * @return array{embed_token: string, content: array<string, mixed>, flow: array<string, mixed>|null}
      */
     public function findForEmbed(int $presentationId): array
     {
@@ -36,21 +37,7 @@ class PresentationReadModel
         return [
             'embed_token' => $presentation->embed_token,
             'content' => $presentation->content,
-        ];
-    }
-
-    /**
-     * @return array{id: int, name: string, content: array<string, mixed>, updated_at: string|null}
-     */
-    public function findForEditor(int $presentationId): array
-    {
-        $presentation = PresentationsView::query()->findOrFail($presentationId);
-
-        return [
-            'id' => $presentation->id,
-            'name' => $presentation->name,
-            'content' => $presentation->content,
-            'updated_at' => $presentation->updated_at?->toISOString(),
+            'flow' => $presentation->flow,
         ];
     }
 
@@ -59,6 +46,9 @@ class PresentationReadModel
      *     id: int,
      *     name: string,
      *     content: array<string, mixed>,
+     *     talk_settings: array<string, mixed>,
+     *     flow: array<string, mixed>|null,
+     *     embed_token: string,
      *     updated_at: string|null,
      *     yoyotranslate: array{
      *         session_id: string|null,
@@ -68,7 +58,7 @@ class PresentationReadModel
      *     }
      * }
      */
-    public function findForPresenter(int $presentationId): array
+    public function findForPresent(int $presentationId): array
     {
         $presentation = PresentationsView::query()->findOrFail($presentationId);
 
@@ -79,6 +69,9 @@ class PresentationReadModel
             'id' => $presentation->id,
             'name' => $presentation->name,
             'content' => $presentation->content,
+            'talk_settings' => TalkSettings::fromArray($presentation->talk_settings ?? [])->toArray(),
+            'flow' => $presentation->flow,
+            'embed_token' => $presentation->embed_token,
             'updated_at' => $presentation->updated_at?->toISOString(),
             'yoyotranslate' => [
                 'session_id' => $sessionId,
@@ -88,6 +81,23 @@ class PresentationReadModel
                 'active' => $sessionId !== null,
                 'started_at' => $presentation->yoyotranslate_session_started_at?->toISOString(),
             ],
+        ];
+    }
+
+    /**
+     * @return array{id: int, name: string, content: array<string, mixed>, talk_settings: array<string, mixed>, flow: array<string, mixed>|null, updated_at: string|null}
+     */
+    public function findForEditor(int $presentationId): array
+    {
+        $presentation = PresentationsView::query()->findOrFail($presentationId);
+
+        return [
+            'id' => $presentation->id,
+            'name' => $presentation->name,
+            'content' => $presentation->content,
+            'talk_settings' => TalkSettings::fromArray($presentation->talk_settings ?? [])->toArray(),
+            'flow' => $presentation->flow,
+            'updated_at' => $presentation->updated_at?->toISOString(),
         ];
     }
 }

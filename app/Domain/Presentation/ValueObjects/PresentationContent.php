@@ -16,6 +16,7 @@ readonly class PresentationContent
     public function __construct(
         public string $version,
         public array $slides,
+        public ?string $backgroundImage = null,
     ) {
         if ($this->version !== self::VERSION) {
             throw new InvalidPresentationContent("Unsupported content version \"{$this->version}\".");
@@ -43,6 +44,7 @@ readonly class PresentationContent
                     : throw new InvalidPresentationContent('Malformed slide entry.'),
                 array_values($data['slides']),
             ),
+            backgroundImage: isset($data['backgroundImage']) ? (string) $data['backgroundImage'] : null,
         );
     }
 
@@ -64,12 +66,18 @@ readonly class PresentationContent
     /** @return array<string, mixed> */
     public function toArray(): array
     {
-        return [
+        $data = [
             'version' => $this->version,
             'slides' => array_map(
                 static fn (Slide $slide): array => $slide->toArray(),
                 $this->slides,
             ),
         ];
+
+        if ($this->backgroundImage !== null) {
+            $data['backgroundImage'] = $this->backgroundImage;
+        }
+
+        return $data;
     }
 }

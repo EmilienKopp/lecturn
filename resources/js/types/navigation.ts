@@ -16,3 +16,13 @@ export type NavItem = {
     icon?: NavIcon;
     isActive?: boolean;
 };
+
+/** A node of the server-built navigation tree (spatie/laravel-navigation). */
+export type ServerNavItem = {
+    url: string;
+    title: string;
+    active: boolean;
+    attributes: { icon?: string };
+    children: ServerNavItem[];
+    depth: number;
+};

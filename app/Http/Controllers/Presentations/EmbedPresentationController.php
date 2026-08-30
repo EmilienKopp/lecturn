@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Presentations;
 
+use App\Domain\Presentation\ValueObjects\FlowGraph;
 use App\Domain\Presentation\ValueObjects\PresentationContent;
 use App\Http\Controllers\Controller;
 use App\Infrastructure\ReadModels\PresentationReadModel;
@@ -24,13 +25,17 @@ class EmbedPresentationController extends Controller
 
     public function __invoke(PresentationModel $presentation): BinaryFileResponse
     {
-        $path = $this->embeds->find($presentation->embed_token)
-            ?? $this->embeds->store(
+        $path = $this->embeds->find($presentation->embed_token);
+
+        if ($path === null) {
+            $data = $this->presentations->findForEmbed($presentation->id);
+
+            $path = $this->embeds->store(
                 $presentation->embed_token,
-                PresentationContent::fromArray(
-                    $this->presentations->findForEmbed($presentation->id)['content'],
-                ),
+                PresentationContent::fromArray($data['content']),
+                $data['flow'] !== null ? FlowGraph::fromArray($data['flow']) : null,
             );
+        }
 
         return response()->file($path, [
             'Content-Type' => 'text/javascript',

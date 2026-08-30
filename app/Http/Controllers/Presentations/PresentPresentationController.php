@@ -19,7 +19,8 @@ class PresentPresentationController extends Controller
         Gate::authorize('view', $presentation);
 
         return Inertia::render('presentations/Present', [
-            'presentation' => $this->presentations->findForPresenter($presentation->id),
+            'presentation' => $this->presentations->findForPresent($presentation->id),
+            'viewerUrl' => route('presentations.viewer', ['presentation' => $presentation->embed_token]),
             'translationRoutes' => [
                 'start' => route('presentations.translation-session.start', [
                     'current_team' => $current_team->slug,

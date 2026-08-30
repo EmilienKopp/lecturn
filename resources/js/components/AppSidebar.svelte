@@ -1,11 +1,7 @@
 <script lang="ts">
     import { Link, page } from '@inertiajs/svelte';
-    import BookOpen from 'lucide-svelte/icons/book-open';
-    import FolderGit2 from 'lucide-svelte/icons/folder-git-2';
-    import LayoutGrid from 'lucide-svelte/icons/layout-grid';
     import type { Snippet } from 'svelte';
     import AppLogo from '@/components/AppLogo.svelte';
-    import NavFooter from '@/components/NavFooter.svelte';
     import NavMain from '@/components/NavMain.svelte';
     import NavUser from '@/components/NavUser.svelte';
     import TeamSwitcher from '@/components/TeamSwitcher.svelte';
@@ -18,8 +14,9 @@
         SidebarMenuButton,
         SidebarMenuItem,
     } from '@/components/ui/sidebar';
+    import { toNavItem } from '@/lib/navIcons';
     import { dashboard } from '@/routes';
-    import type { NavItem, Team } from '@/types';
+    import type { ServerNavItem, Team } from '@/types';
 
     let {
         children,
@@ -32,26 +29,14 @@
         currentTeam ? dashboard(currentTeam.slug) : '/',
     );
 
-    const mainNavItems = $derived<NavItem[]>([
-        {
-            title: 'Dashboard',
-            href: dashboardUrl,
-            icon: LayoutGrid,
-        },
-    ]);
-
-    const footerNavItems: NavItem[] = [
-        {
-            title: 'Repository',
-            href: 'https://github.com/laravel/svelte-starter-kit',
-            icon: FolderGit2,
-        },
-        {
-            title: 'Documentation',
-            href: 'https://laravel.com/docs/starter-kits#svelte',
-            icon: BookOpen,
-        },
-    ];
+    const navGroups = $derived(
+        ((page.props.navigation as ServerNavItem[] | undefined) ?? []).map(
+            (group) => ({
+                label: group.title,
+                items: group.children.map(toNavItem),
+            }),
+        ),
+    );
 </script>
 
 <Sidebar collapsible="icon" variant="inset">
@@ -79,11 +64,12 @@
     </SidebarHeader>
 
     <SidebarContent>
-        <NavMain items={mainNavItems} />
+        {#each navGroups as group (group.label)}
+            <NavMain label={group.label} items={group.items} />
+        {/each}
     </SidebarContent>
 
     <SidebarFooter>
-        <NavFooter items={footerNavItems} />
         <NavUser />
     </SidebarFooter>
 </Sidebar>

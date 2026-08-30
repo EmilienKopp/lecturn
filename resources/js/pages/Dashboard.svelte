@@ -16,10 +16,10 @@
 
 <script lang="ts">
     import AppHead from '@/components/AppHead.svelte';
+    import Flow from '@/components/Flow.svelte';
     import PendingInvitationsModal from '@/components/PendingInvitationsModal.svelte';
     import PlaceholderPattern from '@/components/PlaceholderPattern.svelte';
     import type { DashboardInvitation } from '@/types';
-    import Flow from '@/components/Flow.svelte';
 
     let {
         pendingInvitations = [],
