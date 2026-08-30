@@ -76,7 +76,7 @@ class PresentationReadModel
             'yoyotranslate' => [
                 'session_id' => $sessionId,
                 'websocket_url' => $sessionId !== null
-                    ? rtrim($wsBaseUrl, '/') . '/' . $sessionId
+                    ? rtrim($wsBaseUrl, '/').'/'.$sessionId
                     : null,
                 'active' => $sessionId !== null,
                 'started_at' => $presentation->yoyotranslate_session_started_at?->toISOString(),
