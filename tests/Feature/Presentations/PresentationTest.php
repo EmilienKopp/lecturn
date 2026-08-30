@@ -72,6 +72,9 @@ test('the editor page renders with the presentation content', function () {
         ->where('presentation.id', $presentation->id)
         ->where('presentation.name', $presentation->name)
         ->has('presentation.content.slides', 2)
+        ->where('presentation.talk_settings.showReactions', false)
+        ->where('presentation.talk_settings.showDock', true)
+        ->where('presentation.talk_settings.timerMode', 'elapsed')
         ->where('embed.url', route('presentations.embed', ['presentation' => $presentation->embed_token]))
         ->where('embed.tag', 'lecturn-deck-'.strtolower(substr($presentation->embed_token, 0, 8))),
     );
@@ -132,6 +135,81 @@ test('presentation content can be saved', function () {
     expect($stored->content['slides'][0]['slots']['left'][0]['content'])->toBe('Hello world');
 });
 
+test('a slide title, background and config survive a save', function () {
+    $user = User::factory()->create();
+    $presentation = PresentationModel::factory()->create(['team_id' => $user->currentTeam->id]);
+
+    $content = [
+        'version' => '1.0',
+        'slides' => [
+            [
+                'id' => 'slide-1',
+                'layout' => 'free',
+                'background' => '#0f0f0f',
+                'title' => 'Introduction',
+                'config' => ['rows' => 3, 'cols' => 3],
+                'slots' => ['main' => []],
+            ],
+        ],
+    ];
+
+    $this
+        ->actingAs($user)
+        ->put(route('presentations.update', [
+            'current_team' => $user->currentTeam->slug,
+            'presentation' => $presentation->id,
+        ]), ['content' => $content])
+        ->assertRedirect()
+        ->assertSessionHasNoErrors();
+
+    $slide = PresentationModel::findOrFail($presentation->id)->content['slides'][0];
+
+    expect($slide['title'])->toBe('Introduction')
+        ->and($slide['background'])->toBe('#0f0f0f')
+        ->and($slide['config'])->toBe(['rows' => 3, 'cols' => 3]);
+});
+
+test('a free-layout slide with positioned blocks can be saved', function () {
+    $user = User::factory()->create();
+    $presentation = PresentationModel::factory()->create(['team_id' => $user->currentTeam->id]);
+
+    $content = [
+        'version' => '1.0',
+        'slides' => [
+            [
+                'id' => 'slide-1',
+                'layout' => 'free',
+                'background' => '#ffffff',
+                'slots' => [
+                    'main' => [
+                        [
+                            'id' => 'block-1',
+                            'type' => 'text',
+                            'content' => 'Floating',
+                            'style' => ['x' => '12.5', 'y' => '20', 'width' => '30'],
+                            'transition' => null,
+                        ],
+                    ],
+                ],
+            ],
+        ],
+    ];
+
+    $response = $this
+        ->actingAs($user)
+        ->put(route('presentations.update', [
+            'current_team' => $user->currentTeam->slug,
+            'presentation' => $presentation->id,
+        ]), ['content' => $content]);
+
+    $response->assertRedirect();
+    $response->assertSessionHasNoErrors();
+
+    $stored = PresentationModel::findOrFail($presentation->id);
+    expect($stored->content['slides'][0]['slots']['main'][0]['style'])
+        ->toBe(['x' => '12.5', 'y' => '20', 'width' => '30']);
+});
+
 test('invalid content is rejected with a validation error', function () {
     $user = User::factory()->create();
     $presentation = PresentationModel::factory()->create(['team_id' => $user->currentTeam->id]);
@@ -180,7 +258,7 @@ test('an unknown layout is rejected by request validation', function () {
     $response->assertSessionHasErrors('content.slides.0.layout');
 });
 
-test('the present page renders with the presentation content', function () {
+test('the present page renders with the presentation content, talk settings and viewer url', function () {
     $user = User::factory()->create();
     $presentation = PresentationModel::factory()->withSlides(2)->create([
         'team_id' => $user->currentTeam->id,
@@ -197,7 +275,13 @@ test('the present page renders with the presentation content', function () {
     $response->assertInertia(fn (Assert $page) => $page
         ->component('presentations/Present')
         ->where('presentation.id', $presentation->id)
-        ->has('presentation.content.slides', 2),
+        ->has('presentation.content.slides', 2)
+        ->where('presentation.talk_settings.showReactions', false)
+        ->where('presentation.talk_settings.showDock', true)
+        ->where('presentation.talk_settings.timerMode', 'elapsed')
+        ->where('presentation.talk_settings.durationMinutes', null)
+        ->has('presentation.flow')
+        ->has('viewerUrl'),
     );
 });
 

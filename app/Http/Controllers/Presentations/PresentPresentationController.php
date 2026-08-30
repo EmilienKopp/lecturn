@@ -18,8 +18,11 @@ class PresentPresentationController extends Controller
     {
         Gate::authorize('view', $presentation);
 
+        $data = $this->presentations->findForPresent($presentation->id);
+
         return Inertia::render('presentations/Present', [
-            'presentation' => $this->presentations->findForEditor($presentation->id),
+            'presentation' => $data,
+            'viewerUrl' => route('presentations.viewer', ['presentation' => $presentation->embed_token]),
         ]);
     }
 }

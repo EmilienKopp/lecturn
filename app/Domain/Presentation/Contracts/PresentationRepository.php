@@ -13,4 +13,16 @@ interface PresentationRepository
     public function save(PresentationEntity $presentation): PresentationEntity;
 
     public function delete(int $id): void;
+
+    /**
+     * Stores the deck-wide background image and returns its public URL.
+     */
+    public function storeBackgroundImage(int $id, string $filePath, string $fileName): string;
+
+    public function clearBackgroundImage(int $id): void;
+
+    /**
+     * Stores a content image (used by blocks) and returns its public URL.
+     */
+    public function storeImage(int $id, string $filePath, string $fileName): string;
 }

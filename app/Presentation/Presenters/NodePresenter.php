@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Presentation\Presenters;
 
+use App\Domain\Presentation\ValueObjects\FlowGraph;
 use App\Domain\Presentation\ValueObjects\PresentationContent;
 use App\Presentation\Contracts\Presenter;
 use App\Presentation\ExportFormat;
@@ -24,12 +25,13 @@ class NodePresenter implements Presenter
         private readonly ?string $customElementTag = null,
     ) {}
 
-    public function present(PresentationContent $content, string $name): PresenterOutput
+    public function present(PresentationContent $content, string $name, ?FlowGraph $flow = null): PresenterOutput
     {
         $process = new Process(['node', base_path('scripts/present.mjs')], base_path());
         $process->setInput(json_encode([
             'format' => $this->format->value,
             'content' => $content->toArray(),
+            'flow' => $flow?->toArray(),
             'tag' => $this->customElementTag,
         ], JSON_THROW_ON_ERROR));
         $process->setTimeout(120);

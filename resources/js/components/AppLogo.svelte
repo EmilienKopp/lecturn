@@ -2,7 +2,8 @@
     import { page } from '@inertiajs/svelte';
     import AppLogoIcon from '@/components/AppLogoIcon.svelte';
 
-    const appName = $derived((page.props.name as string) ?? 'Lecturn');
+    const appName = $derived((page.props.name as string) ?? 'Tecturn');
+    $inspect(page.props);
 </script>
 
 <div

@@ -1,26 +1,27 @@
 <script lang="ts">
-    import { untrack } from 'svelte';
-    import EditorJS, { type OutputData } from '@editorjs/editorjs';
+    import CodeTool from '@editorjs/code';
+    import EditorJS from '@editorjs/editorjs';
+    import type { OutputData } from '@editorjs/editorjs';
     // @ts-expect-error — no bundled types
     import Header from '@editorjs/header';
     // @ts-expect-error — no bundled types
     import List from '@editorjs/list';
     // @ts-expect-error — no bundled types
-    import CodeTool from '@editorjs/code';
     // @ts-expect-error — no bundled types
     import Quote from '@editorjs/quote';
+    import { untrack } from 'svelte';
     import type { EditorState } from '@/lib/lecturn/editor-state.svelte';
     import type { Block } from '@/types/generated';
 
-    let {
-        editor,
-        block,
-    }: { editor: EditorState; block: Block } = $props();
+    let { editor, block }: { editor: EditorState; block: Block } = $props();
 
     let holderEl = $state<HTMLDivElement | null>(null);
 
     function parseContent(raw: string): OutputData | undefined {
-        if (!raw) return undefined;
+        if (!raw) {
+            return undefined;
+        }
+
         try {
             return JSON.parse(raw) as OutputData;
         } catch {
@@ -29,7 +30,9 @@
     }
 
     $effect(() => {
-        if (!holderEl) return;
+        if (!holderEl) {
+            return;
+        }
 
         const instance = new EditorJS({
             holder: holderEl,
@@ -58,9 +61,7 @@
         });
 
         return () => {
-            instance.isReady
-                .then(() => instance.destroy())
-                .catch(() => {});
+            instance.isReady.then(() => instance.destroy()).catch(() => {});
         };
     });
 </script>
@@ -104,11 +105,26 @@
         opacity: 1;
     }
 
-    .editorjs-holder :global(h1.ce-header) { font-size: 2rem; font-weight: 700; }
-    .editorjs-holder :global(h2.ce-header) { font-size: 1.5rem; font-weight: 600; }
-    .editorjs-holder :global(h3.ce-header) { font-size: 1.25rem; font-weight: 600; }
-    .editorjs-holder :global(h4.ce-header) { font-size: 1rem; font-weight: 600; }
-    .editorjs-holder :global(.cdx-quote) { border-left: 3px solid currentColor; padding-left: 1rem; }
+    .editorjs-holder :global(h1.ce-header) {
+        font-size: 2rem;
+        font-weight: 700;
+    }
+    .editorjs-holder :global(h2.ce-header) {
+        font-size: 1.5rem;
+        font-weight: 600;
+    }
+    .editorjs-holder :global(h3.ce-header) {
+        font-size: 1.25rem;
+        font-weight: 600;
+    }
+    .editorjs-holder :global(h4.ce-header) {
+        font-size: 1rem;
+        font-weight: 600;
+    }
+    .editorjs-holder :global(.cdx-quote) {
+        border-left: 3px solid currentColor;
+        padding-left: 1rem;
+    }
     .editorjs-holder :global(.ce-code__textarea) {
         font-family: monospace;
         font-size: 0.875rem;

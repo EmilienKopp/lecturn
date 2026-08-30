@@ -1,5 +1,6 @@
 import { createInertiaApp } from '@inertiajs/svelte';
 import AppLayout from '@/layouts/AppLayout.svelte';
+import GuestLayout from '@/layouts/GuestLayout.svelte';
 import SettingsLayout from '@/layouts/settings/Layout.svelte';
 import { initializeFlashToast } from '@/lib/flash-toast';
 import { initializeTheme } from '@/lib/theme.svelte';
@@ -13,6 +14,8 @@ createInertiaApp({
             case name === 'Welcome':
             case name === 'presentations/Present':
                 return null;
+            case name === 'presentations/Viewer':
+                return GuestLayout;
             case name.startsWith('settings/'):
             case name.startsWith('teams/'):
                 return [AppLayout, SettingsLayout];

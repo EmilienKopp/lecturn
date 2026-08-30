@@ -33,7 +33,10 @@
         : ''}"
     style={styleAttribute}
     oninput={(event) =>
-        editor.updateBlockContent(block.id, event.currentTarget.textContent ?? '')}
+        editor.updateBlockContent(
+            block.id,
+            event.currentTarget.textContent ?? '',
+        )}
     onclick={(event) => {
         event.stopPropagation();
         editor.selectedBlockId = block.id;

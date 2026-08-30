@@ -18,13 +18,14 @@ readonly class Slide
         public ?string $background,
         public array $slots,
         public ?array $config = null,
+        public ?string $title = null,
     ) {
         if ($this->id === '') {
             throw new InvalidPresentationContent('Slide id cannot be empty.');
         }
 
-        // custom-grid and rich-text use a single 'main' slot with free-form block placement.
-        if ($this->layout !== SlideLayout::CustomGrid && $this->layout !== SlideLayout::RichText) {
+        // Freeform layouts use a single 'main' slot with free-form block placement.
+        if (! $this->layout->usesFreeformSlots()) {
             $allowedSlots = $this->layout->slots();
 
             foreach (array_keys($this->slots) as $slotName) {
@@ -64,27 +65,38 @@ readonly class Slide
             background: isset($data['background']) ? (string) $data['background'] : null,
             slots: $slots,
             config: is_array($data['config'] ?? null) ? $data['config'] : null,
+            title: isset($data['title']) && $data['title'] !== '' ? (string) $data['title'] : null,
         );
     }
 
     /** @return array<string, mixed> */
     public function toArray(): array
     {
+        $slots = array_map(
+            static fn (array $blocks): array => array_map(
+                static fn (Block $block): array => $block->toArray(),
+                $blocks,
+            ),
+            $this->slots,
+        );
+
         $data = [
             'id' => $this->id,
             'layout' => $this->layout->value,
             'background' => $this->background,
-            'slots' => array_map(
-                static fn (array $blocks): array => array_map(
-                    static fn (Block $block): array => $block->toArray(),
-                    $blocks,
-                ),
-                $this->slots,
-            ),
+            // An empty map JSON-encodes as [] and reaches the frontend as an
+            // array, where writing slots['main'] = [...] adds a string key that
+            // JSON.stringify then drops, silently losing the first block added
+            // to a previously empty slide. Force an object so the shape holds.
+            'slots' => $slots === [] ? (object) [] : $slots,
         ];
 
         if ($this->config !== null) {
             $data['config'] = $this->config;
+        }
+
+        if ($this->title !== null) {
+            $data['title'] = $this->title;
         }
 
         return $data;

@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Presentation;
 
+use App\Domain\Presentation\ValueObjects\FlowGraph;
 use App\Domain\Presentation\ValueObjects\PresentationContent;
 
 /**
@@ -28,11 +29,11 @@ class EmbedCache
     /**
      * @return string Absolute path to the freshly generated build.
      */
-    public function store(string $token, PresentationContent $content): string
+    public function store(string $token, PresentationContent $content, ?FlowGraph $flow = null): string
     {
         $output = $this->presenters
             ->make(ExportFormat::WebComponent, $this->customElementTag($token))
-            ->present($content, 'embed');
+            ->present($content, 'embed', $flow);
 
         $path = $this->path($token);
 
@@ -51,10 +52,10 @@ class EmbedCache
     /**
      * Regenerate the cached build, but only if one was already materialized.
      */
-    public function refresh(string $token, PresentationContent $content): void
+    public function refresh(string $token, PresentationContent $content, ?FlowGraph $flow = null): void
     {
         if ($this->find($token) !== null) {
-            $this->store($token, $content);
+            $this->store($token, $content, $flow);
         }
     }
 

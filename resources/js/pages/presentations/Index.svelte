@@ -84,8 +84,7 @@
 
     const openEditor = (presentation: PresentationListItem) => {
         router.visit(
-            edit({ current_team: teamSlug, presentation: presentation.id })
-                .url,
+            edit({ current_team: teamSlug, presentation: presentation.id }).url,
         );
     };
 
@@ -174,9 +173,7 @@
                             {presentation.slide_count === 1
                                 ? 'slide'
                                 : 'slides'}
-                            · updated {formatUpdatedAt(
-                                presentation.updated_at,
-                            )}
+                            · updated {formatUpdatedAt(presentation.updated_at)}
                         </CardDescription>
                     </CardHeader>
                 </Card>

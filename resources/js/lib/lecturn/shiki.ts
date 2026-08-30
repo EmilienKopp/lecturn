@@ -1,9 +1,5 @@
-import {
-    createHighlighter,
-    type Highlighter,
-    type BundledLanguage,
-    type BundledTheme,
-} from 'shiki';
+import { createHighlighter } from 'shiki';
+import type { Highlighter, BundledLanguage, BundledTheme } from 'shiki';
 
 export const SUPPORTED_LANGUAGES: BundledLanguage[] = [
     'typescript',
@@ -27,6 +23,7 @@ export function getHighlighter(): Promise<Highlighter> {
             langs: SUPPORTED_LANGUAGES,
         });
     }
+
     return highlighterPromise;
 }
 
@@ -36,6 +33,9 @@ export async function highlight(
     theme: BundledTheme = 'github-dark',
 ): Promise<string> {
     const hl = await getHighlighter();
-    const safeLang = SUPPORTED_LANGUAGES.includes(lang as BundledLanguage) ? lang : 'typescript';
+    const safeLang = SUPPORTED_LANGUAGES.includes(lang as BundledLanguage)
+        ? lang
+        : 'typescript';
+
     return hl.codeToHtml(code, { lang: safeLang, theme });
 }
