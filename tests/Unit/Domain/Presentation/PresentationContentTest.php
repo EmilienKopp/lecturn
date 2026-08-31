@@ -98,12 +98,14 @@ it('rejects a document without slides', function () {
     PresentationContent::fromArray(['version' => '1.0']);
 })->throws(InvalidPresentationContent::class, 'requires a slides array');
 
-it('creates an empty document with a single center slide', function () {
+it('creates an empty document with a single free slide', function () {
+    // The editor only offers the free layout; seeding anything else crashes
+    // SlideCanvas on a missing layout definition.
     $content = PresentationContent::empty();
 
     expect($content->version)->toBe('1.0')
         ->and($content->slides)->toHaveCount(1)
-        ->and($content->slides[0]->layout)->toBe(SlideLayout::Center)
+        ->and($content->slides[0]->layout)->toBe(SlideLayout::Free)
         ->and($content->slides[0]->slots)->toBe([]);
 });
 

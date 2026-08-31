@@ -12,7 +12,11 @@
     }: { editor: EditorState; presentationId: number } = $props();
 
     const slide = $derived(editor.selectedSlide);
-    const definition = $derived(layoutDefinitions[slide.layout]);
+    // Older decks may reference layouts that are no longer offered; fall
+    // back to the free layout instead of crashing on a missing definition.
+    const definition = $derived(
+        layoutDefinitions[slide.layout] ?? layoutDefinitions.free,
+    );
     const isCustomGrid = $derived(slide.layout === 'custom-grid');
     const isRichText = $derived(slide.layout === 'rich-text');
     const isFree = $derived(slide.layout === 'free');

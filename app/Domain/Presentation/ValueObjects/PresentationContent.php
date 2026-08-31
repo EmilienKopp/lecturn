@@ -55,7 +55,7 @@ readonly class PresentationContent
             slides: [
                 new Slide(
                     id: 'slide-1',
-                    layout: SlideLayout::Center,
+                    layout: SlideLayout::Free,
                     background: null,
                     slots: [],
                 ),
