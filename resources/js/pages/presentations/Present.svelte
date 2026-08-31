@@ -61,25 +61,34 @@
 <AppHead title={presentation.name} />
 
 <div class="flex h-screen w-screen overflow-hidden bg-black">
-    <!-- Slide column -->
-    <div
-        class="relative flex flex-1 flex-col items-center justify-center overflow-hidden bg-black [container-type:size]"
-    >
-        <!-- The slide box is the largest 16:9 that fits the column on both
+    <!-- Slide column: a vertical stack so the caption bar docks above or
+         below the slide area, shrinking it instead of overlapping it. The
+         presenter dock keeps its full-height column to the right. -->
+    <div class="flex min-w-0 flex-1 flex-col overflow-hidden">
+        <div
+            class="relative flex min-h-0 flex-1 flex-col items-center justify-center overflow-hidden bg-black [container-type:size]"
+        >
+            <!-- The slide box is the largest 16:9 that fits the column on both
              axes, centered, so wide screens letterbox with black around it
              instead of the slide stretching to fill. -->
-        <div
-            style="width: min(100cqw, calc(100cqh * 16 / 9)); aspect-ratio: 16 / 9;"
-        >
-            <Presenter
-                content={presentation.content}
-                flow={presentation.flow}
+            <div
+                style="width: min(100cqw, calc(100cqh * 16 / 9)); aspect-ratio: 16 / 9;"
+            >
+                <Presenter
+                    content={presentation.content}
+                    flow={presentation.flow}
+                />
+            </div>
+
+            <FloatingReactions
+                bind:this={floatingReactions}
+                enabled={showReactions}
             />
         </div>
 
-        <FloatingReactions
-            bind:this={floatingReactions}
-            enabled={showReactions}
+        <YoYoTranslatePanel
+            yoyotranslate={presentation.yoyotranslate}
+            routes={translationRoutes}
         />
     </div>
 
@@ -94,8 +103,3 @@
         />
     {/if}
 </div>
-
-<YoYoTranslatePanel
-    yoyotranslate={presentation.yoyotranslate}
-    routes={translationRoutes}
-/>

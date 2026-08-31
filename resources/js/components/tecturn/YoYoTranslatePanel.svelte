@@ -1,5 +1,9 @@
 <script lang="ts">
     import { useForm } from '@inertiajs/svelte';
+    import ArrowDownToLine from 'lucide-svelte/icons/arrow-down-to-line';
+    import ArrowUpToLine from 'lucide-svelte/icons/arrow-up-to-line';
+    import RefreshCw from 'lucide-svelte/icons/refresh-cw';
+    import Unlink from 'lucide-svelte/icons/unlink';
     import { SvelteSet } from 'svelte/reactivity';
     import type { YoYoTranslateInfo } from '@/types/generated';
 
@@ -15,6 +19,7 @@
     type SocketStatus = 'disconnected' | 'connecting' | 'live' | 'error';
     let socket: WebSocket | null = null;
     let socketStatus: SocketStatus = $state('disconnected');
+    let reconnectNonce = $state(0);
 
     // Frames carry arrays of sub-word tokens tagged by language; concatenate
     // them into one running transcript per language.
@@ -25,8 +30,21 @@
         translation_status?: string;
     };
     let transcripts = $state<Record<string, string>>({});
-    let selectedLanguage = $state('');
     let languages = $derived(Object.keys(transcripts));
+
+    // Up to two languages shown at once; two get a two-column layout.
+    let selectedLanguages = $state<string[]>([]);
+    let dockedTop = $state(false);
+
+    function toggleLanguage(language: string) {
+        if (selectedLanguages.includes(language)) {
+            selectedLanguages = selectedLanguages.filter(
+                (selected) => selected !== language,
+            );
+        } else {
+            selectedLanguages = [...selectedLanguages, language].slice(-2);
+        }
+    }
 
     // YoYoTranslate has no public API yet, so linking is manual: the presenter
     // creates an event at yoyotranslate.app and pastes its URL here.
@@ -39,13 +57,15 @@
 
     const stopForm = useForm({});
 
-    function stopSession(e: SubmitEvent) {
-        e.preventDefault();
+    function unlinkSession() {
         stopForm.delete(routes.stop);
     }
 
-    // Open / close WebSocket whenever the session becomes active
+    // Open / close WebSocket whenever the session becomes active. Bumping
+    // reconnectNonce re-runs the effect, tearing down and reopening the socket.
     $effect(() => {
+        void reconnectNonce;
+
         if (yoyotranslate.active && yoyotranslate.websocket_url) {
             socketStatus = 'connecting';
             socket = new WebSocket(yoyotranslate.websocket_url);
@@ -129,35 +149,49 @@
                 translatedLanguages.add(language);
             }
 
-            // Auto-select the first translated language to arrive (falling
-            // back to the original) so captions show without any clicking.
-            if (
-                selectedLanguage === '' ||
-                (translatedLanguages.has(language) &&
-                    !translatedLanguages.has(selectedLanguage))
-            ) {
-                selectedLanguage = language;
-            }
+            autoSelect(language);
         }
 
         return true;
     }
 
+    /**
+     * Auto-select the first translated language to arrive (falling back to
+     * the original) so captions show without any clicking.
+     */
+    function autoSelect(language: string) {
+        if (selectedLanguages.includes(language)) {
+            return;
+        }
+
+        if (selectedLanguages.length === 0) {
+            selectedLanguages = [language];
+
+            return;
+        }
+
+        const hasTranslatedSelection = selectedLanguages.some((selected) =>
+            translatedLanguages.has(selected),
+        );
+
+        if (translatedLanguages.has(language) && !hasTranslatedSelection) {
+            selectedLanguages = [...selectedLanguages, language].slice(-2);
+        }
+    }
+
     const translatedLanguages = new SvelteSet<string>();
 
-    // Keep the newest caption text in view as the transcript grows.
-    let captionBox = $state<HTMLDivElement>();
+    // Keep the newest caption text in view as the transcripts grow.
+    const captionBoxes: Record<string, HTMLDivElement | undefined> = {};
     $effect(() => {
-        void transcripts[selectedLanguage];
-        captionBox?.scrollTo({ top: captionBox.scrollHeight });
-    });
+        for (const language of selectedLanguages) {
+            void transcripts[language];
+        }
 
-    const statusLabel: Record<SocketStatus, string> = {
-        disconnected: 'Disconnected',
-        connecting: 'Connecting…',
-        live: 'Live',
-        error: 'Error',
-    };
+        for (const box of Object.values(captionBoxes)) {
+            box?.scrollTo({ top: box.scrollHeight });
+        }
+    });
 
     const statusColor: Record<SocketStatus, string> = {
         disconnected: 'bg-gray-400',
@@ -167,46 +201,29 @@
     };
 </script>
 
-<div
-    class="fixed bottom-4 right-4 z-50 w-80 rounded-xl border border-white/10 bg-black/70 p-4 text-white shadow-2xl backdrop-blur-md"
-    data-test="yoyotranslate-panel"
->
-    <div class="mb-3 flex items-center justify-between">
-        <span class="text-sm font-semibold">YoYoTranslate</span>
-        <span class="flex items-center gap-1.5 text-xs">
-            <span
-                class="inline-block h-2 w-2 rounded-full {statusColor[
-                    socketStatus
-                ]}"
-            ></span>
-            {statusLabel[socketStatus]}
-        </span>
-    </div>
-
-    {#if yoyotranslate.active}
-        <!-- Active session controls -->
-        <form onsubmit={stopSession}>
-            <button
-                type="submit"
-                disabled={stopForm.processing}
-                class="w-full rounded-lg bg-red-600 px-3 py-1.5 text-xs font-medium hover:bg-red-700 disabled:opacity-50"
-            >
-                {stopForm.processing ? 'Unlinking…' : 'Unlink Translation'}
-            </button>
-        </form>
-
-        <!-- Live captions -->
-        {#if languages.length > 0}
+{#if yoyotranslate.active}
+    <!-- Subtitle bar: rendered in the slide column's vertical stack, so it
+         claims its own space instead of overlaying the slides. order-first
+         moves it above the slide area when docked to the top. -->
+    <div
+        class="w-full bg-zinc-950/80 px-6 pb-4 pt-1.5 {dockedTop
+            ? 'order-first'
+            : 'order-last'}"
+        data-test="yoyotranslate-panel"
+    >
+        <!-- Control cluster, top right -->
+        <div class="flex items-center justify-end gap-2">
             {#if languages.length > 1}
-                <div class="mt-3 flex flex-wrap gap-1">
+                <div class="flex gap-1">
                     {#each languages as language (language)}
                         <button
                             type="button"
-                            onclick={() => (selectedLanguage = language)}
-                            class="rounded px-2 py-0.5 text-[11px] uppercase {selectedLanguage ===
-                            language
-                                ? 'bg-indigo-600 text-white'
-                                : 'bg-white/10 text-white/60 hover:bg-white/20'}"
+                            onclick={() => toggleLanguage(language)}
+                            class="rounded px-1.5 text-[10px] uppercase tracking-wide transition-colors {selectedLanguages.includes(
+                                language,
+                            )
+                                ? 'bg-white/20 text-white/90'
+                                : 'text-white/35 hover:text-white/70'}"
                         >
                             {language}
                         </button>
@@ -214,19 +231,82 @@
                 </div>
             {/if}
 
-            <div
-                bind:this={captionBox}
-                class="mt-3 max-h-28 overflow-y-auto rounded-lg bg-white/10 p-2 text-xs leading-relaxed"
+            <span
+                class="flex items-center gap-1 text-[10px] uppercase tracking-wide text-white/40"
             >
-                <p>{transcripts[selectedLanguage] ?? ''}</p>
+                <span
+                    class="inline-block h-1.5 w-1.5 rounded-full {statusColor[
+                        socketStatus
+                    ]}"
+                ></span>
+                {socketStatus}
+            </span>
+
+            <button
+                type="button"
+                onclick={() => (dockedTop = !dockedTop)}
+                title={dockedTop ? 'Dock to bottom' : 'Dock to top'}
+                class="text-white/35 transition-colors hover:text-white/80"
+            >
+                {#if dockedTop}
+                    <ArrowDownToLine class="h-3 w-3" />
+                {:else}
+                    <ArrowUpToLine class="h-3 w-3" />
+                {/if}
+            </button>
+
+            <button
+                type="button"
+                onclick={() => reconnectNonce++}
+                title="Reconnect"
+                class="text-white/35 transition-colors hover:text-white/80"
+            >
+                <RefreshCw class="h-3 w-3" />
+            </button>
+
+            <button
+                type="button"
+                onclick={unlinkSession}
+                disabled={stopForm.processing}
+                title="Unlink translation"
+                class="text-white/35 transition-colors hover:text-red-400 disabled:opacity-50"
+            >
+                <Unlink class="h-3 w-3" />
+            </button>
+        </div>
+
+        <!-- Captions -->
+        {#if selectedLanguages.length > 0}
+            <div
+                class="mt-2 grid gap-8 {selectedLanguages.length === 2
+                    ? 'grid-cols-2'
+                    : 'grid-cols-1'}"
+            >
+                {#each selectedLanguages as language (language)}
+                    <div
+                        bind:this={captionBoxes[language]}
+                        class="max-h-28 overflow-y-auto text-lg leading-relaxed text-white/90"
+                    >
+                        <p>{transcripts[language] ?? ''}</p>
+                    </div>
+                {/each}
             </div>
-        {:else if socketStatus === 'live'}
-            <p class="mt-3 text-center text-xs text-white/50">
+        {:else}
+            <p class="my-4 text-center text-sm text-white/40">
                 Waiting for captions…
             </p>
         {/if}
-    {:else}
-        <!-- Link an event created in YoYoTranslate's own UI -->
+    </div>
+{:else}
+    <!-- Link an event created in YoYoTranslate's own UI -->
+    <div
+        class="fixed bottom-4 right-4 z-50 w-80 rounded-xl border border-white/10 bg-black/70 p-4 text-white shadow-2xl backdrop-blur-md"
+        data-test="yoyotranslate-panel"
+    >
+        <div class="mb-3 flex items-center justify-between">
+            <span class="text-sm font-semibold">YoYoTranslate</span>
+        </div>
+
         <form onsubmit={startSession} class="space-y-2">
             <label class="block text-xs text-white/70">
                 Event URL
@@ -255,5 +335,5 @@
                 {startForm.processing ? 'Linking…' : 'Link Translation'}
             </button>
         </form>
-    {/if}
-</div>
+    </div>
+{/if}
