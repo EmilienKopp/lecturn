@@ -1,5 +1,5 @@
-CREATE VIEW presentations_view AS
-
+CREATE VIEW
+    presentations_view AS
 SELECT
     id,
     team_id,
@@ -12,4 +12,5 @@ SELECT
     yoyotranslate_session_started_at,
     created_at,
     updated_at
-FROM presentations;
+FROM
+    presentations;
