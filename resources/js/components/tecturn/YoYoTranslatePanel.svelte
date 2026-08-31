@@ -276,26 +276,32 @@
         </div>
 
         <!-- Captions -->
-        {#if selectedLanguages.length > 0}
-            <div
-                class="mt-2 grid gap-8 {selectedLanguages.length === 2
-                    ? 'grid-cols-2'
-                    : 'grid-cols-1'}"
-            >
-                {#each selectedLanguages as language (language)}
-                    <div
-                        bind:this={captionBoxes[language]}
-                        class="max-h-28 overflow-y-auto text-lg leading-relaxed text-white/90"
-                    >
-                        <p>{transcripts[language] ?? ''}</p>
-                    </div>
-                {/each}
-            </div>
-        {:else}
-            <p class="my-4 text-center text-sm text-white/40">
-                Waiting for captions…
-            </p>
-        {/if}
+        <!-- Fixed-height caption region so the bar claims its space even before
+             the first tokens arrive. -->
+        <div class="mt-2 h-[max(10vh,3.5rem)]">
+            {#if selectedLanguages.length > 0}
+                <div
+                    class="grid h-full gap-8 {selectedLanguages.length === 2
+                        ? 'grid-cols-2'
+                        : 'grid-cols-1'}"
+                >
+                    {#each selectedLanguages as language (language)}
+                        <div
+                            bind:this={captionBoxes[language]}
+                            class="h-full overflow-y-auto text-3xl leading-relaxed text-white/90"
+                        >
+                            <p>{transcripts[language] ?? ''}</p>
+                        </div>
+                    {/each}
+                </div>
+            {:else}
+                <p
+                    class="flex h-full items-center justify-center text-sm text-white/40"
+                >
+                    Waiting for captions…
+                </p>
+            {/if}
+        </div>
     </div>
 {:else}
     <!-- Link an event created in YoYoTranslate's own UI -->
