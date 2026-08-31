@@ -1,18 +1,21 @@
 <script lang="ts">
     import AppHead from '@/components/AppHead.svelte';
-    import FloatingReactions from '@/components/lecturn/FloatingReactions.svelte';
-    import Presenter from '@/components/lecturn/Presenter.svelte';
-    import PresenterDock from '@/components/lecturn/PresenterDock.svelte';
+    import FloatingReactions from '@/components/tecturn/FloatingReactions.svelte';
+    import Presenter from '@/components/tecturn/Presenter.svelte';
+    import PresenterDock from '@/components/tecturn/PresenterDock.svelte';
+    import YoYoTranslatePanel from '@/components/tecturn/YoYoTranslatePanel.svelte';
     import { getEcho } from '@/lib/echo';
     import type {
         FlowGraph,
         PresentationContent,
         TalkSettings,
+        YoYoTranslateInfo,
     } from '@/types/generated';
 
     let {
         presentation,
         viewerUrl,
+        translationRoutes,
     }: {
         presentation: {
             id: number;
@@ -22,8 +25,10 @@
             flow: FlowGraph | null;
             embed_token: string;
             updated_at: string | null;
+            yoyotranslate: YoYoTranslateInfo;
         };
         viewerUrl: string;
+        translationRoutes: { start: string; stop: string };
     } = $props();
 
     let slideCount = $derived(presentation.content.slides.length);
@@ -89,3 +94,8 @@
         />
     {/if}
 </div>
+
+<YoYoTranslatePanel
+    yoyotranslate={presentation.yoyotranslate}
+    routes={translationRoutes}
+/>

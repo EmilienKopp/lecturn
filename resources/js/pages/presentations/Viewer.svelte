@@ -2,7 +2,7 @@
     import { useHttp } from '@inertiajs/svelte';
     import SendReactionController from '@/actions/App/Http/Controllers/Presentations/SendReactionController';
     import AppHead from '@/components/AppHead.svelte';
-    import FloatingReactions from '@/components/lecturn/FloatingReactions.svelte';
+    import FloatingReactions from '@/components/tecturn/FloatingReactions.svelte';
 
     let {
         presentationName,

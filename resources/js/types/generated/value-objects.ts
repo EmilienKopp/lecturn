@@ -143,3 +143,14 @@ export type Transition = {
     readonly nodeId: string | null;
     readonly order: number | null;
 };
+export type YoYoTranslateInfo = {
+    readonly session_id: string | null;
+    readonly websocket_url: string | null;
+    readonly active: boolean;
+    readonly started_at: string | null;
+};
+export type YoYoTranslateSession = {
+    readonly websocketUrl: string;
+    readonly sessionId: string;
+    readonly startedAt: undefined;
+};

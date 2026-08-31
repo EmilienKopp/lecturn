@@ -24,6 +24,8 @@ class PresentationEntity extends BaseEntity
         public ?int $id = null,
         public ?DateTimeInterface $created_at = null,
         public ?DateTimeInterface $updated_at = null,
+        public ?string $yoyotranslateSessionId = null,
+        public ?DateTimeInterface $yoyotranslateSessionStartedAt = null,
     ) {}
 
     public function rename(string $name): void
@@ -38,6 +40,18 @@ class PresentationEntity extends BaseEntity
     public function replaceContent(PresentationContent $content): void
     {
         $this->content = $content;
+    }
+
+    public function attachTranslationSession(string $sessionId, DateTimeInterface $startedAt): void
+    {
+        $this->yoyotranslateSessionId = $sessionId;
+        $this->yoyotranslateSessionStartedAt = $startedAt;
+    }
+
+    public function detachTranslationSession(): void
+    {
+        $this->yoyotranslateSessionId = null;
+        $this->yoyotranslateSessionStartedAt = null;
     }
 
     public function changeTalkSettings(TalkSettings $talkSettings): void
@@ -85,6 +99,8 @@ class PresentationEntity extends BaseEntity
             'flow' => $this->flow?->toArray(),
             'created_at' => $this->created_at,
             'updated_at' => $this->updated_at,
+            'yoyotranslate_session_id' => $this->yoyotranslateSessionId,
+            'yoyotranslate_session_started_at' => $this->yoyotranslateSessionStartedAt,
         ];
     }
 }

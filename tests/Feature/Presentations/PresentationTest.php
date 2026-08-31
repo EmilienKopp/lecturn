@@ -76,7 +76,7 @@ test('the editor page renders with the presentation content', function () {
         ->where('presentation.talk_settings.showDock', true)
         ->where('presentation.talk_settings.timerMode', 'elapsed')
         ->where('embed.url', route('presentations.embed', ['presentation' => $presentation->embed_token]))
-        ->where('embed.tag', 'lecturn-deck-'.strtolower(substr($presentation->embed_token, 0, 8))),
+        ->where('embed.tag', 'tecturn-deck-'.strtolower(substr($presentation->embed_token, 0, 8))),
     );
 });
 

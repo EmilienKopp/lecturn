@@ -27,11 +27,13 @@ use Spatie\MediaLibrary\MediaCollections\Models\Media;
  * @property array<string, mixed>|null $talk_settings
  * @property array<string, mixed>|null $flow
  * @property string $embed_token
+ * @property string|null $yoyotranslate_session_id
+ * @property Carbon|null $yoyotranslate_session_started_at
  * @property Carbon|null $created_at
  * @property Carbon|null $updated_at
  * @property-read Team $team
  */
-#[Fillable(['team_id', 'name', 'content', 'talk_settings', 'flow'])]
+#[Fillable(['team_id', 'name', 'content', 'talk_settings', 'flow', 'yoyotranslate_session_id', 'yoyotranslate_session_started_at'])]
 #[UsePolicy(PresentationPolicy::class)]
 class PresentationModel extends Model implements HasMedia
 {
@@ -92,6 +94,8 @@ class PresentationModel extends Model implements HasMedia
             flow: $this->flow !== null ? FlowGraph::fromArray($this->flow) : null,
             created_at: $this->created_at?->toDateTimeImmutable(),
             updated_at: $this->updated_at?->toDateTimeImmutable(),
+            yoyotranslateSessionId: $this->yoyotranslate_session_id,
+            yoyotranslateSessionStartedAt: $this->yoyotranslate_session_started_at?->toDateTimeImmutable(),
         );
     }
 
@@ -109,6 +113,7 @@ class PresentationModel extends Model implements HasMedia
             'content' => 'array',
             'talk_settings' => 'array',
             'flow' => 'array',
+            'yoyotranslate_session_started_at' => 'datetime',
         ];
     }
 }

@@ -10,6 +10,8 @@ use App\Http\Controllers\Presentations\ExportPresentationController;
 use App\Http\Controllers\Presentations\ListPresentationsController;
 use App\Http\Controllers\Presentations\PresentPresentationController;
 use App\Http\Controllers\Presentations\SendReactionController;
+use App\Http\Controllers\Presentations\StartTranslationSessionController;
+use App\Http\Controllers\Presentations\StopTranslationSessionController;
 use App\Http\Controllers\Presentations\UpdatePresentationController;
 use App\Http\Controllers\Presentations\UploadPresentationBackgroundController;
 use App\Http\Controllers\Presentations\UploadPresentationImageController;
@@ -42,6 +44,8 @@ Route::prefix('{current_team}')
         Route::post('presentations', CreatePresentationController::class)->name('presentations.store');
         Route::get('presentations/{presentation}', EditPresentationController::class)->name('presentations.edit');
         Route::get('presentations/{presentation}/present', PresentPresentationController::class)->name('presentations.present');
+        Route::post('presentations/{presentation}/translation-session', StartTranslationSessionController::class)->name('presentations.translation-session.start');
+        Route::delete('presentations/{presentation}/translation-session', StopTranslationSessionController::class)->name('presentations.translation-session.stop');
         Route::get('presentations/{presentation}/export', ExportPresentationController::class)->name('presentations.export');
         Route::put('presentations/{presentation}', UpdatePresentationController::class)->name('presentations.update');
         Route::post('presentations/{presentation}/background', UploadPresentationBackgroundController::class)->name('presentations.background.store');

@@ -42,11 +42,29 @@ class PresentationReadModel
     }
 
     /**
-     * @return array{id: int, name: string, content: array<string, mixed>, talk_settings: array<string, mixed>, flow: array<string, mixed>|null, embed_token: string, updated_at: string|null}
+     * @return array{
+     *     id: int,
+     *     name: string,
+     *     content: array<string, mixed>,
+     *     talk_settings: array<string, mixed>,
+     *     flow: array<string, mixed>|null,
+     *     embed_token: string,
+     *     updated_at: string|null,
+     *     yoyotranslate: array{
+     *         session_id: string|null,
+     *         websocket_url: string|null,
+     *         active: bool,
+     *         started_at: string|null
+     *     }
+     * }
      */
     public function findForPresent(int $presentationId): array
     {
         $presentation = PresentationsView::query()->findOrFail($presentationId);
+
+        $sessionId = $presentation->yoyotranslate_session_id;
+        $wsBaseUrl = (string) config('yoyotranslate.ws_base_url');
+        $wsLang = (string) config('yoyotranslate.ws_lang', 'all');
 
         return [
             'id' => $presentation->id,
@@ -56,6 +74,14 @@ class PresentationReadModel
             'flow' => $presentation->flow,
             'embed_token' => $presentation->embed_token,
             'updated_at' => $presentation->updated_at?->toISOString(),
+            'yoyotranslate' => [
+                'session_id' => $sessionId,
+                'websocket_url' => $sessionId !== null
+                    ? rtrim($wsBaseUrl, '/').'/'.$sessionId.'?lang='.$wsLang
+                    : null,
+                'active' => $sessionId !== null,
+                'started_at' => $presentation->yoyotranslate_session_started_at?->toISOString(),
+            ],
         ];
     }
 
