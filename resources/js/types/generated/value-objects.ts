@@ -139,6 +139,7 @@ export type TalkSettings = {
     readonly showTranslation: boolean;
     readonly timerMode: string;
     readonly durationMinutes: number | null;
+    readonly autoSave: boolean;
 };
 export type Transition = {
     readonly nodeId: string | null;

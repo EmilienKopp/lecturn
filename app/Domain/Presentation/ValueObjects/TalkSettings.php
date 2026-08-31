@@ -15,6 +15,7 @@ readonly class TalkSettings
         public bool $showTranslation = true,
         public string $timerMode = 'elapsed',
         public ?int $durationMinutes = null,
+        public bool $autoSave = false,
     ) {}
 
     /**
@@ -32,6 +33,7 @@ readonly class TalkSettings
             durationMinutes: isset($data['durationMinutes']) && is_numeric($data['durationMinutes'])
                 ? (int) $data['durationMinutes']
                 : null,
+            autoSave: (bool) ($data['autoSave'] ?? false),
         );
     }
 
@@ -49,6 +51,7 @@ readonly class TalkSettings
             'showTranslation' => $this->showTranslation,
             'timerMode' => $this->timerMode,
             'durationMinutes' => $this->durationMinutes,
+            'autoSave' => $this->autoSave,
         ];
     }
 }

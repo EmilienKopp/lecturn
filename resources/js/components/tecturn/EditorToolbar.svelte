@@ -21,9 +21,13 @@
         DropdownMenuTrigger,
     } from '@/components/ui/dropdown-menu';
     import { Input } from '@/components/ui/input';
+    import { promise } from '@/lib/support/async';
+    import { ms } from '@/lib/support/time';
     import type { EditorState } from '@/lib/tecturn/editor-state.svelte';
     import { present, update } from '@/routes/presentations';
     import type { TalkSettings } from '@/types/generated';
+    import Checkbox from '../ui/checkbox/Checkbox.svelte';
+    import Label from '../ui/label/Label.svelte';
 
     let {
         editor,
@@ -51,6 +55,10 @@
     let showDock = $state(talkSettings.showDock);
     let showTranslation = $state(talkSettings.showTranslation);
     let savingTalkSettings = $state(false);
+    let autoSave = $state(talkSettings.autoSave ?? false);
+    let saving = $state(promise());
+
+    const AUTO_SAVE_INTERVAL = ms(10_000);
 
     const persistTalkSettings = (
         apply: () => void,
@@ -76,6 +84,7 @@
                     showReactions,
                     showDock,
                     showTranslation,
+                    autoSave,
                 },
             },
             {
@@ -106,6 +115,13 @@
             () => (showTranslation = !showTranslation),
         );
 
+    const toggleAutoSave = () => {
+        persistTalkSettings(
+            () => (autoSave = !autoSave),
+            () => (autoSave = !autoSave),
+        );
+    };
+
     const copyEmbedSnippet = async () => {
         await navigator.clipboard.writeText(embedSnippet);
         toast.success('Embed code copied to clipboard.');
@@ -116,7 +132,6 @@
         toast.success('Reaction URL copied to clipboard.');
     };
 
-    let saving = $state(false);
     let exportingWebComponent = $state(false);
 
     const exportWebComponent = async () => {
@@ -138,36 +153,43 @@
             : null,
     );
 
-    const save = () => {
+    const save = async () => {
         const currentTeam = page.props.currentTeam;
 
         if (!currentTeam) {
             return;
         }
 
-        saving = true;
-
-        router.put(
-            update({
-                current_team: currentTeam.slug,
-                presentation: presentationId,
-            }).url,
-            {
-                name,
-                content: editor.content,
-                flow: $state.snapshot(editor.flow),
-            },
-            {
-                preserveState: true,
-                onSuccess: () => {
-                    editor.dirty = false;
+        saving = new Promise<void>((resolve) => {
+            router.put(
+                update({
+                    current_team: currentTeam.slug,
+                    presentation: presentationId,
+                }).url,
+                {
+                    name,
+                    content: editor.content,
+                    flow: $state.snapshot(editor.flow),
+                    autoSave: autoSave,
                 },
-                onFinish: () => {
-                    saving = false;
+                {
+                    preserveState: true,
+                    onSuccess: () => {
+                        editor.dirty = false;
+                    },
+                    onFinish: () => {
+                        resolve();
+                    },
                 },
-            },
-        );
+            );
+        });
     };
+
+    setInterval(() => {
+        if (autoSave && editor.dirty) {
+            save();
+        }
+    }, AUTO_SAVE_INTERVAL.milliseconds());
 </script>
 
 <div class="flex items-center gap-3 border-b px-4 py-2">
@@ -200,6 +222,22 @@
         >
             <Workflow class="h-4 w-4" /> Flow
         </Button>
+    </div>
+
+    <div
+        class="text-sm flex items-center gap-1 justify-center"
+        title="Toggle auto save (every {AUTO_SAVE_INTERVAL.seconds()}s)"
+        class:text-muted-foreground={!autoSave}
+    >
+        <Checkbox
+            id="auto-save-toggle"
+            size="sm"
+            class="text-muted-foreground"
+            data-test="editor-toggle-auto-save"
+            onclick={toggleAutoSave}
+            checked={autoSave}
+        />
+        <Label for="auto-save-toggle">Auto Save</Label>
     </div>
 
     {#snippet toggleRow(
@@ -269,9 +307,9 @@
                         {...props}
                         variant="outline"
                         size="sm"
-                        data-test="editor-preferences-menu"
+                        data-test="editor-settings-menu"
                     >
-                        <Settings2 class="h-4 w-4" /> Preferences
+                        <Settings2 class="h-4 w-4" /> Settings
                         <ChevronDown class="h-3.5 w-3.5 opacity-60" />
                     </Button>
                 {/snippet}
@@ -370,12 +408,18 @@
 
         <Button
             size="sm"
-            disabled={!editor.dirty || saving}
+            disabled={!editor.dirty}
             onclick={save}
             data-test="editor-save-button"
         >
             <Save class="h-4 w-4" />
-            {saving ? 'Saving…' : 'Save'}
+            {#key saving}
+                {#await saving}
+                    Saving…
+                {:then}
+                    Save
+                {/await}
+            {/key}
         </Button>
     </div>
 </div>
