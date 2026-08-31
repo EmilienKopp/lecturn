@@ -11,10 +11,9 @@
     } = $props();
 
     // WebSocket state
+    type SocketStatus = 'disconnected' | 'connecting' | 'live' | 'error';
     let socket: WebSocket | null = null;
-    let socketStatus: 'disconnected' | 'connecting' | 'live' | 'error' = $state(
-        'disconnected',
-    );
+    let socketStatus: SocketStatus = $state('disconnected');
     let captions: string[] = $state([]);
 
     // Form for starting a session (needs a source language)
@@ -43,8 +42,7 @@
             });
 
             socket.addEventListener('message', (event) => {
-                const text =
-                    typeof event.data === 'string' ? event.data : '';
+                const text = typeof event.data === 'string' ? event.data : '';
                 if (text) {
                     captions = [...captions.slice(-49), text];
                 }
@@ -69,14 +67,14 @@
         }
     });
 
-    const statusLabel: Record<typeof socketStatus, string> = {
+    const statusLabel: Record<SocketStatus, string> = {
         disconnected: 'Disconnected',
         connecting: 'Connecting…',
         live: 'Live',
         error: 'Error',
     };
 
-    const statusColor: Record<typeof socketStatus, string> = {
+    const statusColor: Record<SocketStatus, string> = {
         disconnected: 'bg-gray-400',
         connecting: 'bg-yellow-400 animate-pulse',
         live: 'bg-green-500',
@@ -91,7 +89,11 @@
     <div class="mb-3 flex items-center justify-between">
         <span class="text-sm font-semibold">YoYoTranslate</span>
         <span class="flex items-center gap-1.5 text-xs">
-            <span class="inline-block h-2 w-2 rounded-full {statusColor[socketStatus]}"></span>
+            <span
+                class="inline-block h-2 w-2 rounded-full {statusColor[
+                    socketStatus
+                ]}"
+            ></span>
             {statusLabel[socketStatus]}
         </span>
     </div>
@@ -110,13 +112,17 @@
 
         <!-- Live captions -->
         {#if captions.length > 0}
-            <div class="mt-3 max-h-28 overflow-y-auto rounded-lg bg-white/10 p-2 text-xs leading-relaxed">
+            <div
+                class="mt-3 max-h-28 overflow-y-auto rounded-lg bg-white/10 p-2 text-xs leading-relaxed"
+            >
                 {#each captions as caption, i (i)}
                     <p>{caption}</p>
                 {/each}
             </div>
         {:else if socketStatus === 'live'}
-            <p class="mt-3 text-center text-xs text-white/50">Waiting for captions…</p>
+            <p class="mt-3 text-center text-xs text-white/50">
+                Waiting for captions…
+            </p>
         {/if}
     {:else}
         <!-- Start session form -->
@@ -138,7 +144,9 @@
             </label>
 
             {#if startForm.errors.source_language}
-                <p class="text-xs text-red-400">{startForm.errors.source_language}</p>
+                <p class="text-xs text-red-400">
+                    {startForm.errors.source_language}
+                </p>
             {/if}
 
             <button
