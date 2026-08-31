@@ -72,6 +72,7 @@ export type FlowNode = {
         label?: string | null;
         blockId?: string;
         actionId?: string;
+        disabled?: boolean;
     };
 };
 export type FlowNodeType = 'slide' | 'transition' | 'code-action';

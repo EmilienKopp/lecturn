@@ -244,6 +244,74 @@ test('a slide with no incoming nav edge is dropped from the exported deck', func
         ->not->toContain('MARKER_ORPHAN');
 });
 
+test('a slide marked disabled stays hidden when no nav edges remain', function () {
+    $user = User::factory()->create();
+
+    $slide = fn (string $id, string $marker): array => [
+        'id' => $id,
+        'layout' => 'free',
+        'background' => '#ffffff',
+        'slots' => [
+            'main' => [
+                [
+                    'id' => "block-{$id}",
+                    'type' => 'text',
+                    'content' => $marker,
+                    'style' => ['x' => '10', 'y' => '10', 'width' => '40'],
+                    'transition' => null,
+                ],
+            ],
+        ],
+    ];
+
+    // Disabling the only non-entry slide removes the last nav edge. Without
+    // the explicit marker that reads as an unwired legacy deck (fully
+    // enabled), silently undoing the disable.
+    $presentation = PresentationModel::factory()->create([
+        'team_id' => $user->currentTeam->id,
+        'name' => 'Emptied Chain Deck',
+        'content' => [
+            'version' => '1.0',
+            'slides' => [
+                $slide('slide-1', 'MARKER_ENTRY'),
+                $slide('slide-2', 'MARKER_DISABLED'),
+            ],
+        ],
+        'flow' => [
+            'version' => '1.0',
+            'nodes' => [
+                [
+                    'id' => 'node-1',
+                    'type' => 'slide',
+                    'position' => ['x' => 0, 'y' => 0],
+                    'data' => ['slideId' => 'slide-1'],
+                ],
+                [
+                    'id' => 'node-2',
+                    'type' => 'slide',
+                    'position' => ['x' => 0, 'y' => 160],
+                    'data' => ['slideId' => 'slide-2', 'disabled' => true],
+                ],
+            ],
+            'edges' => [],
+        ],
+    ]);
+
+    $response = $this
+        ->actingAs($user)
+        ->get(route('presentations.export', [
+            'current_team' => $user->currentTeam->slug,
+            'presentation' => $presentation->id,
+            'format' => 'svelte',
+        ]));
+
+    $response->assertOk();
+
+    expect($response->streamedContent())
+        ->toContain('MARKER_ENTRY')
+        ->not->toContain('MARKER_DISABLED');
+});
+
 test('a presentation can be exported as a web component', function () {
     $user = User::factory()->create();
     $presentation = PresentationModel::factory()->withSlides(1)->create([

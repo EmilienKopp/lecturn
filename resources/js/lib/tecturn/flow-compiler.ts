@@ -211,27 +211,28 @@ export function slideStepSequence(flow: FlowGraph, slide: Slide): SlideStep[] {
  * at least one incoming navigation edge. As a backward-compatibility rule, a
  * deck with no navigation edges at all is treated as fully enabled — that keeps
  * legacy and freshly-created decks (which wire nothing) playing every slide
- * until the author starts using the nav chain. Shared by the editor, the
- * Presenter, and the codegen so all three agree on what is shown.
+ * until the author starts using the nav chain. Explicitly disabling a slide
+ * marks its node `data.disabled`, so a chain whose last edge was removed by
+ * disabling isn't mistaken for an unwired deck (which would silently re-enable
+ * everything). Shared by the editor, the Presenter, and the codegen so all
+ * three agree on what is shown.
  */
 export function enabledSlideIds(
     content: PresentationContent,
     flow: FlowGraph,
 ): Set<string> {
-    const slideNodeIds = new Set(
-        flow.nodes
-            .filter((node) => node.type === 'slide')
-            .map((node) => node.id),
-    );
+    const slideNodes = flow.nodes.filter((node) => node.type === 'slide');
+    const slideNodeIds = new Set(slideNodes.map((node) => node.id));
     const nodesById = new Map(flow.nodes.map((node) => [node.id, node]));
     const navEdges = flow.edges.filter(
         (edge) =>
             slideNodeIds.has(edge.source) && slideNodeIds.has(edge.target),
     );
-
-    if (navEdges.length === 0) {
-        return new Set(content.slides.map((slide) => slide.id));
-    }
+    const markedDisabled = new Set(
+        slideNodes
+            .filter((node) => node.data.disabled === true)
+            .map((node) => node.data.slideId),
+    );
 
     const withIncoming = new Set<string>();
 
@@ -246,7 +247,11 @@ export function enabledSlideIds(
     const enabled = new Set<string>();
 
     content.slides.forEach((slide, index) => {
-        if (index === 0 || withIncoming.has(slide.id)) {
+        if (
+            index === 0 ||
+            withIncoming.has(slide.id) ||
+            (navEdges.length === 0 && !markedDisabled.has(slide.id))
+        ) {
             enabled.add(slide.id);
         }
     });

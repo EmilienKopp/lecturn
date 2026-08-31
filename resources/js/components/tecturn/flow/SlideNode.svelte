@@ -1,6 +1,7 @@
 <script lang="ts">
     import { Handle, Position } from '@xyflow/svelte';
     import type { NodeProps } from '@xyflow/svelte';
+    import EyeOff from 'lucide-svelte/icons/eye-off';
     import Presentation from 'lucide-svelte/icons/presentation';
 
     let { data, selected }: NodeProps = $props();
@@ -28,6 +29,9 @@
     >
         <Presentation class="h-3.5 w-3.5" />
         {title ?? `Slide ${index + 1}`}
+        {#if !enabled}
+            <EyeOff class="ml-auto h-3.5 w-3.5" aria-label="Disabled slide" />
+        {/if}
     </div>
 
     {#if excerpt}

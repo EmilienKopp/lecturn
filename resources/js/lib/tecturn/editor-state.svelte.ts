@@ -418,6 +418,12 @@ export class EditorState {
             label: null,
         });
 
+        // Hand-wiring a slide into the nav chain re-enables it; drop the
+        // explicit marker so it can't spring back once the chain empties.
+        if (target.type === 'slide') {
+            delete target.data.disabled;
+        }
+
         if (target.type === 'transition' && ownerSlideId) {
             this.assignSlideIdDownstream(targetId, ownerSlideId);
             this.reconcilePins();
@@ -554,9 +560,17 @@ export class EditorState {
             return;
         }
 
-        for (let i = 0; i < this.content.slides.length - 1; i++) {
-            const from = this.slideNodeFor(this.content.slides[i].id);
-            const to = this.slideNodeFor(this.content.slides[i + 1].id);
+        // Slides explicitly disabled while the chain was empty stay out of
+        // the materialized chain, otherwise wiring would re-enable them.
+        const chainSlides = this.content.slides.filter(
+            (slide, index) =>
+                index === 0 ||
+                this.slideNodeFor(slide.id)?.data.disabled !== true,
+        );
+
+        for (let i = 0; i < chainSlides.length - 1; i++) {
+            const from = this.slideNodeFor(chainSlides[i].id);
+            const to = this.slideNodeFor(chainSlides[i + 1].id);
 
             if (from && to) {
                 this.pushNavEdge(from.id, to.id);
@@ -572,11 +586,16 @@ export class EditorState {
             return;
         }
 
+        // Decide the direction before materializing: wiring the chain gives
+        // this slide an incoming edge, which would misread a disabled slide
+        // as enabled and flip the toggle the wrong way.
+        const wasEnabled = this.isSlideEnabled(slide.id);
+
         // Disabling means dropping out of the chain, which only exists once
         // it's explicit — materialize the implied order first.
         this.materializeChain();
 
-        if (this.isSlideEnabled(slide.id)) {
+        if (wasEnabled) {
             this.disableSlide(slide.id);
         } else {
             this.enableSlide(slide.id);
@@ -592,6 +611,11 @@ export class EditorState {
         if (!node) {
             return;
         }
+
+        // The explicit marker survives even when removing this edge empties
+        // the chain, which would otherwise read as an unwired (fully enabled)
+        // legacy deck and silently undo the disable.
+        node.data.disabled = true;
 
         const navIn = this.navInEdges(node.id);
         const navOut = this.navOutEdge(node.id);
@@ -658,6 +682,8 @@ export class EditorState {
         if (!predecessorNode || !node) {
             return;
         }
+
+        delete node.data.disabled;
 
         const inherited = this.navOutEdge(predecessorNode.id);
         const inheritedTargetId = inherited?.target ?? null;

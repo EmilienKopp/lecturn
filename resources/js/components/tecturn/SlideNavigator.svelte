@@ -1,4 +1,5 @@
 <script lang="ts">
+    import EyeOff from 'lucide-svelte/icons/eye-off';
     import Plus from 'lucide-svelte/icons/plus';
     import Trash2 from 'lucide-svelte/icons/trash-2';
     import { Button } from '@/components/ui/button';
@@ -53,9 +54,10 @@
 
                 {#if disabled}
                     <span
-                        class="mt-0.5 block text-[10px] font-medium tracking-wide text-muted-foreground uppercase"
-                        >Disabled</span
+                        class="mt-0.5 flex items-center gap-1 text-[10px] font-medium tracking-wide text-muted-foreground uppercase"
                     >
+                        <EyeOff class="h-3 w-3" /> Disabled
+                    </span>
                 {/if}
 
                 {#if editor.content.slides.length > 1}
