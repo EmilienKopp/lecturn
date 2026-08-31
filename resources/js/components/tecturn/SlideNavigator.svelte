@@ -2,7 +2,7 @@
     import Plus from 'lucide-svelte/icons/plus';
     import Trash2 from 'lucide-svelte/icons/trash-2';
     import { Button } from '@/components/ui/button';
-    import type { EditorState } from '@/lib/lecturn/editor-state.svelte';
+    import type { EditorState } from '@/lib/tecturn/editor-state.svelte';
 
     let { editor }: { editor: EditorState } = $props();
 </script>

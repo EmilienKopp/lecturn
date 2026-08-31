@@ -5,8 +5,8 @@ import {
     enabledSlideIds,
     migrateLegacyTransitions,
     transitionsForSlide,
-} from '@/lib/lecturn/flow-compiler';
-import { layoutDefinitions } from '@/lib/lecturn/layouts';
+} from '@/lib/tecturn/flow-compiler';
+import { layoutDefinitions } from '@/lib/tecturn/layouts';
 import type {
     Block,
     BlockStyle,

@@ -1,6 +1,6 @@
 <script lang="ts">
-    import type { EditorState } from '@/lib/lecturn/editor-state.svelte';
-    import { availableLayouts, layoutDefinitions } from '@/lib/lecturn/layouts';
+    import type { EditorState } from '@/lib/tecturn/editor-state.svelte';
+    import { availableLayouts, layoutDefinitions } from '@/lib/tecturn/layouts';
 
     let { editor }: { editor: EditorState } = $props();
 

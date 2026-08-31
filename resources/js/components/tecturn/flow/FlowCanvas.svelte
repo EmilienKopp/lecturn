@@ -13,7 +13,7 @@
     import Sparkles from 'lucide-svelte/icons/sparkles';
     import { toast } from 'svelte-sonner';
     import { Button } from '@/components/ui/button';
-    import type { EditorState } from '@/lib/lecturn/editor-state.svelte';
+    import type { EditorState } from '@/lib/tecturn/editor-state.svelte';
     import CodeActionNode from './CodeActionNode.svelte';
     import SlideNode from './SlideNode.svelte';
     import TransitionNode from './TransitionNode.svelte';

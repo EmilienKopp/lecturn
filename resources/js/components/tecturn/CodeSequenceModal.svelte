@@ -4,7 +4,7 @@
     import Plus from 'lucide-svelte/icons/plus';
     import Trash2 from 'lucide-svelte/icons/trash-2';
     import { untrack } from 'svelte';
-    import CodeEditor from '@/components/lecturn/CodeEditor.svelte';
+    import CodeEditor from '@/components/tecturn/CodeEditor.svelte';
     import { Button } from '@/components/ui/button';
     import {
         Dialog,
@@ -13,8 +13,8 @@
         DialogTitle,
     } from '@/components/ui/dialog';
     import { Label } from '@/components/ui/label';
-    import { isValidHighlightLines } from '@/lib/lecturn/code-actions';
-    import type { EditorState } from '@/lib/lecturn/editor-state.svelte';
+    import { isValidHighlightLines } from '@/lib/tecturn/code-actions';
+    import type { EditorState } from '@/lib/tecturn/editor-state.svelte';
 
     let {
         editor,

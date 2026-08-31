@@ -9,7 +9,7 @@
         children?: Snippet;
     } = $props();
 
-    const appName = import.meta.env.VITE_APP_NAME || 'Laravel';
+    const appName = import.meta.env.VITE_APP_NAME || 'Tecturn';
     const fullTitle = $derived(title ? `${title} - ${appName}` : appName);
 </script>
 

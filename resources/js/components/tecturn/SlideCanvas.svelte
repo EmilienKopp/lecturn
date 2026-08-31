@@ -1,10 +1,10 @@
 <script lang="ts">
-    import FreeCanvas from '@/components/lecturn/FreeCanvas.svelte';
-    import GridCanvas from '@/components/lecturn/GridCanvas.svelte';
-    import RichTextEditor from '@/components/lecturn/RichTextEditor.svelte';
-    import SlotRenderer from '@/components/lecturn/SlotRenderer.svelte';
-    import type { EditorState } from '@/lib/lecturn/editor-state.svelte';
-    import { layoutDefinitions } from '@/lib/lecturn/layouts';
+    import FreeCanvas from '@/components/tecturn/FreeCanvas.svelte';
+    import GridCanvas from '@/components/tecturn/GridCanvas.svelte';
+    import RichTextEditor from '@/components/tecturn/RichTextEditor.svelte';
+    import SlotRenderer from '@/components/tecturn/SlotRenderer.svelte';
+    import type { EditorState } from '@/lib/tecturn/editor-state.svelte';
+    import { layoutDefinitions } from '@/lib/tecturn/layouts';
 
     let {
         editor,

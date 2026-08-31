@@ -1,6 +1,6 @@
-# Lecturn — Technical Overview
+# Tecturn — Technical Overview
 
-Lecturn is a presentation design and delivery tool. You design slides out of **blocks**, wire their reveal order in a **flow graph**, and the same JSON document drives the live presenter, the editor preview, and code export. This document explains the architecture at a high level.
+Tecturn is a presentation design and delivery tool. You design slides out of **blocks**, wire their reveal order in a **flow graph**, and the same JSON document drives the live presenter, the editor preview, and code export. This document explains the architecture at a high level.
 
 ## 1. Backend (Laravel)
 
@@ -30,8 +30,8 @@ Relevant directories: `app/Domain/Presentation/` (entities, value objects, contr
 The frontend has three consumers of the same presentation JSON:
 
 1. **Editor** (`pages/presentations/Editor.svelte`) — the design stage.
-2. **Presenter** (`components/lecturn/Presenter.svelte`) — live playback built on Animotion (reveal.js).
-3. **Code generation** (`lib/lecturn/CodeGeneration/`) — turns the JSON into a standalone Svelte component for export and embeds.
+2. **Presenter** (`components/tecturn/Presenter.svelte`) — live playback built on Animotion (reveal.js).
+3. **Code generation** (`lib/tecturn/CodeGeneration/`) — turns the JSON into a standalone Svelte component for export and embeds.
 
 ### The design stage
 
@@ -55,7 +55,7 @@ Reveal sequencing is a small graph DSL rather than nested markup. Everything is 
 - **Transition nodes** — reveal steps within a slide; blocks are pinned to them.
 - **Code-action nodes** — successive states of a code block (code morphing).
 
-A **flow compiler** (`lib/lecturn/flow-compiler.ts`) turns this graph into a linear step sequence per slide. That compiled sequence is the single source of truth for reveal order, shared by the editor, the live presenter, and code generation, so all three always agree.
+A **flow compiler** (`lib/tecturn/flow-compiler.ts`) turns this graph into a linear step sequence per slide. That compiled sequence is the single source of truth for reveal order, shared by the editor, the live presenter, and code generation, so all three always agree.
 
 ### The plugin-based rendering pipeline
 

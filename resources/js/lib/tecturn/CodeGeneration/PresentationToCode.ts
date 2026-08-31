@@ -19,7 +19,7 @@ import { ANIMOTION_IMPORT_ORDER } from './contracts.ts';
 import { INDENT, escapeAttribute } from './support.ts';
 
 /**
- * The engine: compiles a Lecturn presentation document into an
+ * The engine: compiles a Tecturn presentation document into an
  * Animotion-compatible Svelte component (single-file output). Owns the flow
  * compilation, the <Slide> shells and the file skeleton (script imports,
  * styles); every piece of markup inside a slide comes from a plugin resolved

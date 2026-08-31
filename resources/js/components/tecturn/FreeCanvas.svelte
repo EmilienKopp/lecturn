@@ -2,18 +2,18 @@
     import { page } from '@inertiajs/svelte';
     import { toast } from 'svelte-sonner';
     import UploadPresentationImageController from '@/actions/App/Http/Controllers/Presentations/UploadPresentationImageController';
-    import BlockPinMenu from '@/components/lecturn/BlockPinMenu.svelte';
-    import BoxBlockView from '@/components/lecturn/BoxBlockView.svelte';
-    import CodeBlockView from '@/components/lecturn/CodeBlockView.svelte';
-    import TextBlockView from '@/components/lecturn/TextBlockView.svelte';
-    import type { EditorState } from '@/lib/lecturn/editor-state.svelte';
+    import BlockPinMenu from '@/components/tecturn/BlockPinMenu.svelte';
+    import BoxBlockView from '@/components/tecturn/BoxBlockView.svelte';
+    import CodeBlockView from '@/components/tecturn/CodeBlockView.svelte';
+    import TextBlockView from '@/components/tecturn/TextBlockView.svelte';
+    import type { EditorState } from '@/lib/tecturn/editor-state.svelte';
     import {
         clampPercent,
         FREE_DEFAULTS,
         round2,
         startPointerDrag,
-    } from '@/lib/lecturn/free-drag';
-    import { uploadImage } from '@/lib/lecturn/uploads';
+    } from '@/lib/tecturn/free-drag';
+    import { uploadImage } from '@/lib/tecturn/uploads';
 
     let {
         editor,

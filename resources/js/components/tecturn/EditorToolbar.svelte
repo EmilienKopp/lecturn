@@ -11,7 +11,7 @@
     import { toast } from 'svelte-sonner';
     import { Button } from '@/components/ui/button';
     import { Input } from '@/components/ui/input';
-    import type { EditorState } from '@/lib/lecturn/editor-state.svelte';
+    import type { EditorState } from '@/lib/tecturn/editor-state.svelte';
     import { present, update } from '@/routes/presentations';
     import type { TalkSettings } from '@/types/generated';
 

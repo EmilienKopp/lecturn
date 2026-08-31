@@ -1,9 +1,9 @@
 <script lang="ts">
     import AppHead from '@/components/AppHead.svelte';
-    import FloatingReactions from '@/components/lecturn/FloatingReactions.svelte';
-    import Presenter from '@/components/lecturn/Presenter.svelte';
-    import PresenterDock from '@/components/lecturn/PresenterDock.svelte';
-    import YoYoTranslatePanel from '@/components/lecturn/YoYoTranslatePanel.svelte';
+    import FloatingReactions from '@/components/tecturn/FloatingReactions.svelte';
+    import Presenter from '@/components/tecturn/Presenter.svelte';
+    import PresenterDock from '@/components/tecturn/PresenterDock.svelte';
+    import YoYoTranslatePanel from '@/components/tecturn/YoYoTranslatePanel.svelte';
     import { getEcho } from '@/lib/echo';
     import type {
         FlowGraph,

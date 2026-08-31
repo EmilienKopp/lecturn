@@ -262,7 +262,7 @@ test('a presentation can be exported as a web component', function () {
     $response->assertOk();
     $response->assertDownload('launch-deck.js');
 
-    expect($response->streamedContent())->toContain('lecturn-presentation');
+    expect($response->streamedContent())->toContain('tecturn-presentation');
 });
 
 test('an unknown export format is rejected', function () {

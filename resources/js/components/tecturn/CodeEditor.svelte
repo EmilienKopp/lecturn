@@ -1,5 +1,5 @@
 <script lang="ts">
-    import { highlight } from '@/lib/lecturn/shiki';
+    import { highlight } from '@/lib/tecturn/shiki';
 
     let {
         value,

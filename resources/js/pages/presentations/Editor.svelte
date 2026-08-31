@@ -2,19 +2,19 @@
     import { page } from '@inertiajs/svelte';
     import { toast } from 'svelte-sonner';
     import AppHead from '@/components/AppHead.svelte';
-    import CodeSequenceModal from '@/components/lecturn/CodeSequenceModal.svelte';
-    import EditorToolbar from '@/components/lecturn/EditorToolbar.svelte';
-    import FlowCanvas from '@/components/lecturn/flow/FlowCanvas.svelte';
-    import InspectorPanel from '@/components/lecturn/InspectorPanel.svelte';
-    import SlideCanvas from '@/components/lecturn/SlideCanvas.svelte';
-    import SlideNavigator from '@/components/lecturn/SlideNavigator.svelte';
-    import { generatePresentationSvelte } from '@/lib/lecturn/codegen';
+    import CodeSequenceModal from '@/components/tecturn/CodeSequenceModal.svelte';
+    import EditorToolbar from '@/components/tecturn/EditorToolbar.svelte';
+    import FlowCanvas from '@/components/tecturn/flow/FlowCanvas.svelte';
+    import InspectorPanel from '@/components/tecturn/InspectorPanel.svelte';
+    import SlideCanvas from '@/components/tecturn/SlideCanvas.svelte';
+    import SlideNavigator from '@/components/tecturn/SlideNavigator.svelte';
+    import { generatePresentationSvelte } from '@/lib/tecturn/codegen';
     import {
         downloadBlob,
         downloadFile,
         slugify,
-    } from '@/lib/lecturn/download';
-    import { EditorState } from '@/lib/lecturn/editor-state.svelte';
+    } from '@/lib/tecturn/download';
+    import { EditorState } from '@/lib/tecturn/editor-state.svelte';
     import { exportMethod } from '@/routes/presentations';
     import type {
         FlowGraph,

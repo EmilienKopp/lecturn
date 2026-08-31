@@ -165,7 +165,7 @@ export class RichTextLayoutRenderer implements LayoutRendererPlugin {
 }
 
 export const defaultLayoutPlugins: CodegenPlugin = {
-    name: 'lecturn:layouts',
+    name: 'tecturn:layouts',
     layouts: [
         new SlotLayoutRenderer(
             'full',

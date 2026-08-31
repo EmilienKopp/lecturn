@@ -65,7 +65,7 @@ class EmbedCache
      */
     public function customElementTag(string $token): string
     {
-        return 'lecturn-deck-'.strtolower(substr($token, 0, 8));
+        return 'tecturn-deck-'.strtolower(substr($token, 0, 8));
     }
 
     private function path(string $token): string

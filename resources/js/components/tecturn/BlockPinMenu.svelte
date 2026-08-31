@@ -4,7 +4,7 @@
     import Sparkles from 'lucide-svelte/icons/sparkles';
     import X from 'lucide-svelte/icons/x';
     import type { Snippet } from 'svelte';
-    import type { EditorState } from '@/lib/lecturn/editor-state.svelte';
+    import type { EditorState } from '@/lib/tecturn/editor-state.svelte';
     import type { Block } from '@/types/generated';
 
     let {

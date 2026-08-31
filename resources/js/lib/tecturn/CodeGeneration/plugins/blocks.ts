@@ -88,7 +88,7 @@ export class CodeRenderer implements BlockRendererPlugin {
         // autoIndent={false}: Animotion's indent() dedents by the smallest
         // indent among *indented* lines, ignoring zero-indent lines — a
         // snippet with top-level lines loses its whole first indent level.
-        // Lecturn stores code verbatim and the literal adds no wrapper
+        // Tecturn stores code verbatim and the literal adds no wrapper
         // indentation, so the dedent service is pure damage here.
         return `${pad}<Code ${ref ? `bind:this={${ref}} ` : ''}code={\`${escapeTemplateLiteral(block.content)}\`} lang="${escapeAttribute(block.lang ?? 'text')}" theme="github-dark" autoIndent={false} />`;
     }
@@ -182,7 +182,7 @@ export class ParagraphRenderer implements BlockRendererPlugin {
 }
 
 export const defaultBlockPlugins: CodegenPlugin = {
-    name: 'lecturn:blocks',
+    name: 'tecturn:blocks',
     blocks: [
         new RichtextRenderer(),
         new CodeRenderer(),

@@ -7,12 +7,12 @@
     import { toast } from 'svelte-sonner';
     import DeletePresentationBackgroundController from '@/actions/App/Http/Controllers/Presentations/DeletePresentationBackgroundController';
     import UploadPresentationBackgroundController from '@/actions/App/Http/Controllers/Presentations/UploadPresentationBackgroundController';
-    import LayoutPicker from '@/components/lecturn/LayoutPicker.svelte';
+    import LayoutPicker from '@/components/tecturn/LayoutPicker.svelte';
     import { Button } from '@/components/ui/button';
     import { Label } from '@/components/ui/label';
-    import type { EditorState } from '@/lib/lecturn/editor-state.svelte';
-    import { SUPPORTED_LANGUAGES } from '@/lib/lecturn/shiki';
-    import { uploadImage, xsrfToken } from '@/lib/lecturn/uploads';
+    import type { EditorState } from '@/lib/tecturn/editor-state.svelte';
+    import { SUPPORTED_LANGUAGES } from '@/lib/tecturn/shiki';
+    import { uploadImage, xsrfToken } from '@/lib/tecturn/uploads';
 
     let {
         editor,

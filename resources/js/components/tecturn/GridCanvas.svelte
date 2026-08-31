@@ -1,9 +1,9 @@
 <script lang="ts">
-    import BlockPinMenu from '@/components/lecturn/BlockPinMenu.svelte';
-    import BoxBlockView from '@/components/lecturn/BoxBlockView.svelte';
-    import CodeBlockView from '@/components/lecturn/CodeBlockView.svelte';
-    import TextBlockView from '@/components/lecturn/TextBlockView.svelte';
-    import type { EditorState } from '@/lib/lecturn/editor-state.svelte';
+    import BlockPinMenu from '@/components/tecturn/BlockPinMenu.svelte';
+    import BoxBlockView from '@/components/tecturn/BoxBlockView.svelte';
+    import CodeBlockView from '@/components/tecturn/CodeBlockView.svelte';
+    import TextBlockView from '@/components/tecturn/TextBlockView.svelte';
+    import type { EditorState } from '@/lib/tecturn/editor-state.svelte';
 
     let { editor }: { editor: EditorState } = $props();
 

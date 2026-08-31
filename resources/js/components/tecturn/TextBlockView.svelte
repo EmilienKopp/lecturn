@@ -1,5 +1,5 @@
 <script lang="ts">
-    import type { EditorState } from '@/lib/lecturn/editor-state.svelte';
+    import type { EditorState } from '@/lib/tecturn/editor-state.svelte';
     import type { Block } from '@/types/generated';
 
     let { editor, block }: { editor: EditorState; block: Block } = $props();

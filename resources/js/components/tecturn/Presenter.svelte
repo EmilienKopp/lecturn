@@ -16,9 +16,9 @@
         groupBlocksIntoSteps,
         migrateLegacyTransitions,
         stepIndexBySlide,
-    } from '@/lib/lecturn/flow-compiler';
-    import { FREE_DEFAULTS } from '@/lib/lecturn/free-drag';
-    import { layoutDefinitions } from '@/lib/lecturn/layouts';
+    } from '@/lib/tecturn/flow-compiler';
+    import { FREE_DEFAULTS } from '@/lib/tecturn/free-drag';
+    import { layoutDefinitions } from '@/lib/tecturn/layouts';
     import type {
         Block,
         FlowGraph,

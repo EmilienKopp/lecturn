@@ -1,7 +1,7 @@
 <script lang="ts">
-    import CodeEditor from '@/components/lecturn/CodeEditor.svelte';
-    import type { EditorState } from '@/lib/lecturn/editor-state.svelte';
-    import { highlight } from '@/lib/lecturn/shiki';
+    import CodeEditor from '@/components/tecturn/CodeEditor.svelte';
+    import type { EditorState } from '@/lib/tecturn/editor-state.svelte';
+    import { highlight } from '@/lib/tecturn/shiki';
     import type { Block } from '@/types/generated';
 
     let { editor, block }: { editor: EditorState; block: Block } = $props();

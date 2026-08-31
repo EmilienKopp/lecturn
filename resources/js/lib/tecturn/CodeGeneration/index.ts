@@ -22,7 +22,7 @@ export { PresentationToCode } from './PresentationToCode.ts';
 export * from './plugins/blocks.ts';
 export * from './plugins/layouts.ts';
 
-/** Container preloaded with Lecturn's built-in renderer plugins. */
+/** Container preloaded with Tecturn's built-in renderer plugins. */
 export function createDefaultContainer(): CodegenContainer {
     return new CodegenContainer()
         .use(defaultBlockPlugins)
@@ -31,7 +31,7 @@ export function createDefaultContainer(): CodegenContainer {
 }
 
 /**
- * Compile a Lecturn presentation document into an Animotion-compatible
+ * Compile a Tecturn presentation document into an Animotion-compatible
  * Svelte component (single-file output).
  */
 export function generatePresentationSvelte(

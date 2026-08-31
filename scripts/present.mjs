@@ -3,13 +3,13 @@
  *
  * Reads `{ format, content, flow }` as JSON from stdin and writes the export artifact
  * to stdout. The Svelte source generation lives exclusively in
- * resources/js/lib/lecturn/codegen.ts (shared with the frontend editor) — this
+ * resources/js/lib/tecturn/codegen.ts (shared with the frontend editor) — this
  * script only orchestrates around it.
  *
  * Formats:
  *   - "svelte":         the generated Animotion Svelte source, as-is.
  *   - "web-component":  the source compiled as a custom element
- *                       (<lecturn-presentation>) and bundled by Vite into a
+ *                       (<tecturn-presentation>) and bundled by Vite into a
  *                       single self-contained IIFE script (Animotion inlined,
  *                       CSS injected at runtime).
  */
@@ -36,7 +36,7 @@ async function buildWebComponent(source, tag) {
     // The entry must live inside the project so `@animotion/core` resolves.
     const cacheDir = path.join(root, 'node_modules', '.cache');
     fs.mkdirSync(cacheDir, { recursive: true });
-    const tmpDir = fs.mkdtempSync(path.join(cacheDir, 'lecturn-export-'));
+    const tmpDir = fs.mkdtempSync(path.join(cacheDir, 'tecturn-export-'));
     const entry = path.join(tmpDir, 'Presentation.svelte');
 
     try {
@@ -67,7 +67,7 @@ async function buildWebComponent(source, tag) {
                 lib: {
                     entry,
                     formats: ['iife'],
-                    name: 'LecturnPresentation',
+                    name: 'TecturnPresentation',
                     fileName: () => 'presentation.js',
                     cssFileName: 'presentation',
                 },
@@ -98,7 +98,7 @@ try {
 
     // Node 22.18+ runs TypeScript directly via type stripping.
     const { generatePresentationSvelte } =
-        await import('../resources/js/lib/lecturn/codegen.ts');
+        await import('../resources/js/lib/tecturn/codegen.ts');
     const source = generatePresentationSvelte(content, flow ?? null);
 
     switch (format) {
@@ -107,7 +107,7 @@ try {
             break;
         case 'web-component':
             process.stdout.write(
-                await buildWebComponent(source, tag ?? 'lecturn-presentation'),
+                await buildWebComponent(source, tag ?? 'tecturn-presentation'),
             );
             break;
         default:

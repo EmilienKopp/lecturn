@@ -18,7 +18,7 @@ test('a guest can load the embed script and it is generated on first access', fu
     $response->assertOk();
     $response->assertHeader('Content-Type', 'text/javascript; charset=utf-8');
 
-    $tag = 'lecturn-deck-'.strtolower(substr($presentation->embed_token, 0, 8));
+    $tag = 'tecturn-deck-'.strtolower(substr($presentation->embed_token, 0, 8));
     expect($response->getFile()->getContent())->toContain($tag);
     expect(storage_path("app/embeds/{$presentation->embed_token}.js"))->toBeFile();
 });
