@@ -9,6 +9,7 @@ readonly class StartTranslationSessionCommand
     public function __construct(
         public int $presentationId,
         public int $userId,
-        public string $sourceLanguage,
+        public ?string $sourceLanguage = null,
+        public ?string $eventId = null,
     ) {}
 }

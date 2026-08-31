@@ -25,6 +25,7 @@ class StartTranslationSessionController extends Controller
                 presentationId: $presentation->id,
                 userId: Auth::id(),
                 sourceLanguage: $request->validated('source_language'),
+                eventId: $request->eventId(),
             ),
         );
 

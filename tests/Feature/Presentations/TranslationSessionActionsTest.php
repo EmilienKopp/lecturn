@@ -9,11 +9,13 @@ use App\Application\Commands\StopTranslationSessionCommand;
 use App\Domain\Presentation\Contracts\TranslationServiceContract;
 use App\Domain\Presentation\ValueObjects\YoYoTranslateSession;
 use App\Models\PresentationModel;
+use App\Models\User;
 use Illuminate\Support\Carbon;
 
 function makeFakeTranslationService(string $sessionId = 'fake-session-abc'): TranslationServiceContract
 {
-    return new class($sessionId) implements TranslationServiceContract {
+    return new class($sessionId) implements TranslationServiceContract
+    {
         public bool $closeCalled = false;
 
         public function __construct(private readonly string $sessionId) {}
@@ -54,6 +56,60 @@ it('starts a translation session and persists the session id', function () {
         'id' => $presentation->id,
         'yoyotranslate_session_id' => 'session-xyz',
     ]);
+});
+
+it('links a manually created event without calling the translation service', function () {
+    $presentation = PresentationModel::factory()->create();
+
+    $entity = app(StartTranslationSession::class)->execute(
+        new StartTranslationSessionCommand(
+            presentationId: $presentation->id,
+            userId: 1,
+            eventId: '01a05520-5454-7352-aa0f-b9bcb9a23517',
+        ),
+    );
+
+    expect($entity->yoyotranslateSessionId)->toBe('01a05520-5454-7352-aa0f-b9bcb9a23517')
+        ->and($entity->yoyotranslateSessionStartedAt)->not->toBeNull();
+});
+
+it('accepts a pasted event url over http and extracts the event id', function () {
+    $user = User::factory()->create();
+    $presentation = PresentationModel::factory()->create([
+        'team_id' => $user->currentTeam->id,
+    ]);
+
+    $response = $this->actingAs($user)->post(
+        route('presentations.translation-session.start', [
+            'current_team' => $user->currentTeam->slug,
+            'presentation' => $presentation->id,
+        ]),
+        ['event_url' => 'https://yoyotranslate.app/events/01a05520-5454-7352-aa0f-b9bcb9a23517/live'],
+    );
+
+    $response->assertRedirect();
+
+    $this->assertDatabaseHas('presentations', [
+        'id' => $presentation->id,
+        'yoyotranslate_session_id' => '01a05520-5454-7352-aa0f-b9bcb9a23517',
+    ]);
+});
+
+it('rejects a start request with neither event url nor source language', function () {
+    $user = User::factory()->create();
+    $presentation = PresentationModel::factory()->create([
+        'team_id' => $user->currentTeam->id,
+    ]);
+
+    $response = $this->actingAs($user)->post(
+        route('presentations.translation-session.start', [
+            'current_team' => $user->currentTeam->slug,
+            'presentation' => $presentation->id,
+        ]),
+        [],
+    );
+
+    $response->assertSessionHasErrors(['event_url', 'source_language']);
 });
 
 it('stops a translation session and clears the session id', function () {

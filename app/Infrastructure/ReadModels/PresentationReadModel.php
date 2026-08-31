@@ -63,7 +63,8 @@ class PresentationReadModel
         $presentation = PresentationsView::query()->findOrFail($presentationId);
 
         $sessionId = $presentation->yoyotranslate_session_id;
-        $wsBaseUrl = (string) config('yoyotranslate.ws_base_url', 'wss://yoyotranslate.app/session');
+        $wsBaseUrl = (string) config('yoyotranslate.ws_base_url');
+        $wsLang = (string) config('yoyotranslate.ws_lang', 'all');
 
         return [
             'id' => $presentation->id,
@@ -76,7 +77,7 @@ class PresentationReadModel
             'yoyotranslate' => [
                 'session_id' => $sessionId,
                 'websocket_url' => $sessionId !== null
-                    ? rtrim($wsBaseUrl, '/').'/'.$sessionId
+                    ? rtrim($wsBaseUrl, '/').'/'.$sessionId.'?lang='.$wsLang
                     : null,
                 'active' => $sessionId !== null,
                 'started_at' => $presentation->yoyotranslate_session_started_at?->toISOString(),
