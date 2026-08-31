@@ -19,7 +19,7 @@
     class="house flex min-h-screen flex-col text-[hsl(40_30%_96%)] antialiased"
 >
     <header
-        class="mx-auto flex w-full max-w-5xl items-center justify-between px-6 py-6"
+        class="mx-auto flex w-full max-w-5xl items-center justify-between px-6 py-4"
     >
         <span
             class="font-display text-xl font-semibold tracking-tight select-none"
@@ -47,14 +47,14 @@
 
     <main class="flex grow flex-col items-center px-6">
         <!-- The hero: a real Animotion deck on a lit 16:9 stage. -->
-        <div class="mt-4 w-full max-w-5xl">
+        <div class="mt-2 w-full max-w-5xl">
             <div
                 class="stage-canvas aspect-video w-full overflow-hidden rounded-xl bg-[#faf7f0] [container-type:size]"
             >
                 <LandingDeck />
             </div>
             <p
-                class="mt-4 hidden text-center font-mono text-xs text-[hsl(37_6%_55%)] sm:block"
+                class="mt-3 hidden text-center font-mono text-xs text-[hsl(37_6%_55%)] sm:block"
             >
                 click the stage, then
                 <kbd
@@ -69,7 +69,7 @@
             </p>
         </div>
 
-        <section class="mt-16 mb-16 max-w-xl text-center">
+        <section class="mt-6 mb-6 max-w-xl text-center">
             <p class="text-lg leading-relaxed text-[hsl(40_15%_75%)]">
                 Build slides out of blocks, wire their reveal order in a flow
                 graph, and present with live translation and floating audience
@@ -78,14 +78,14 @@
             {#if auth.user}
                 <Link
                     href={toUrl(dashboardUrl)}
-                    class="mt-8 inline-block rounded-md bg-[hsl(37_91%_55%)] px-6 py-2.5 font-medium text-[hsl(36_45%_10%)] transition-colors hover:bg-[hsl(37_91%_62%)] focus-visible:ring-2 focus-visible:ring-[hsl(37_91%_55%)] focus-visible:ring-offset-2 focus-visible:ring-offset-[hsl(36_11%_7%)] focus-visible:outline-none"
+                    class="mt-5 inline-block rounded-md bg-[hsl(37_91%_55%)] px-6 py-2.5 font-medium text-[hsl(36_45%_10%)] transition-colors hover:bg-[hsl(37_91%_62%)] focus-visible:ring-2 focus-visible:ring-[hsl(37_91%_55%)] focus-visible:ring-offset-2 focus-visible:ring-offset-[hsl(36_11%_7%)] focus-visible:outline-none"
                 >
                     Back to your decks
                 </Link>
             {:else}
                 <Link
                     href={toUrl(login())}
-                    class="mt-8 inline-block rounded-md bg-[hsl(37_91%_55%)] px-6 py-2.5 font-medium text-[hsl(36_45%_10%)] transition-colors hover:bg-[hsl(37_91%_62%)] focus-visible:ring-2 focus-visible:ring-[hsl(37_91%_55%)] focus-visible:ring-offset-2 focus-visible:ring-offset-[hsl(36_11%_7%)] focus-visible:outline-none"
+                    class="mt-5 inline-block rounded-md bg-[hsl(37_91%_55%)] px-6 py-2.5 font-medium text-[hsl(36_45%_10%)] transition-colors hover:bg-[hsl(37_91%_62%)] focus-visible:ring-2 focus-visible:ring-[hsl(37_91%_55%)] focus-visible:ring-offset-2 focus-visible:ring-offset-[hsl(36_11%_7%)] focus-visible:outline-none"
                 >
                     Take the stage
                 </Link>
