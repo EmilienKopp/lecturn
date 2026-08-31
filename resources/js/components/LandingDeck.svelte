@@ -35,7 +35,7 @@
             progress: true,
             loop: true,
             keyboardCondition: 'focused',
-            autoSlide: reducedMotion ? 0 : 6000,
+            autoSlide: reducedMotion ? 0 : 5000,
             autoSlideStoppable: true,
         }}
     >
