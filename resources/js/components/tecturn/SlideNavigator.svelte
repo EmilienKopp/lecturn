@@ -2,9 +2,35 @@
     import Plus from 'lucide-svelte/icons/plus';
     import Trash2 from 'lucide-svelte/icons/trash-2';
     import { Button } from '@/components/ui/button';
+    import {
+        Dialog,
+        DialogContent,
+        DialogDescription,
+        DialogFooter,
+        DialogTitle,
+    } from '@/components/ui/dialog';
     import type { EditorState } from '@/lib/tecturn/editor-state.svelte';
 
     let { editor }: { editor: EditorState } = $props();
+
+    let deleteDialogOpen = $state(false);
+    let slideIndexDeleting = $state<number | null>(null);
+
+    const slideNameDeleting = $derived(
+        slideIndexDeleting !== null
+            ? (editor.content.slides[slideIndexDeleting]?.title ??
+                  `Slide ${slideIndexDeleting + 1}`)
+            : '',
+    );
+
+    const confirmDeleteSlide = () => {
+        if (slideIndexDeleting !== null) {
+            editor.removeSlide(slideIndexDeleting);
+        }
+
+        deleteDialogOpen = false;
+        slideIndexDeleting = null;
+    };
 </script>
 
 <div class="flex h-full w-48 flex-col border-r">
@@ -39,7 +65,8 @@
                         class="absolute top-1 right-1 hidden rounded p-1 text-muted-foreground group-hover:block hover:text-destructive"
                         onclick={(event) => {
                             event.stopPropagation();
-                            editor.removeSlide(index);
+                            slideIndexDeleting = index;
+                            deleteDialogOpen = true;
                         }}
                         onkeydown={() => {}}
                         aria-label="Delete slide {index + 1}"
@@ -64,3 +91,30 @@
         </Button>
     </div>
 </div>
+
+<Dialog bind:open={deleteDialogOpen}>
+    <DialogContent>
+        <div class="space-y-3">
+            <DialogTitle>Delete slide</DialogTitle>
+            <DialogDescription>
+                Delete "{slideNameDeleting}"? Its blocks and flow connections go
+                with it. This cannot be undone.
+            </DialogDescription>
+        </div>
+        <DialogFooter>
+            <Button
+                variant="outline"
+                onclick={() => (deleteDialogOpen = false)}
+            >
+                Cancel
+            </Button>
+            <Button
+                variant="destructive"
+                onclick={confirmDeleteSlide}
+                data-test="slide-delete-confirm"
+            >
+                Delete
+            </Button>
+        </DialogFooter>
+    </DialogContent>
+</Dialog>

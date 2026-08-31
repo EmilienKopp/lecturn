@@ -39,15 +39,38 @@
             (candidate) => candidate.id === slideId,
         );
 
-        for (const blocks of Object.values(slide?.slots ?? {})) {
-            for (const block of blocks) {
-                if (block.type === 'text' && block.content.trim() !== '') {
-                    return block.content;
-                }
+        const blocks = Object.values(slide?.slots ?? {}).flat();
+
+        const text = blocks.find(
+            (block) => block.type === 'text' && block.content.trim() !== '',
+        );
+
+        if (text) {
+            return text.content;
+        }
+
+        // No text to quote: summarize what the slide holds instead, so an
+        // image-only slide doesn't read as "Empty slide" on the graph.
+        const nouns: Record<string, string> = {
+            image: 'image',
+            code: 'code block',
+            box: 'box',
+        };
+        const counts = new Map<string, number>();
+
+        for (const block of blocks) {
+            const noun = nouns[block.type];
+
+            if (noun) {
+                counts.set(noun, (counts.get(noun) ?? 0) + 1);
             }
         }
 
-        return '';
+        return [...counts]
+            .map(([noun, count]) =>
+                count === 1 ? `1 ${noun}` : `${count} ${noun}s`,
+            )
+            .join(', ');
     };
 
     // The domain graph (editor.flow) is authoritative; xyflow gets throwaway

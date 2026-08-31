@@ -24,7 +24,7 @@
 
 {#if enabled}
     <div
-        class="pointer-events-none absolute inset-0 overflow-hidden"
+        class="pointer-events-none absolute inset-0 z-[9999] overflow-hidden"
         aria-hidden="true"
     >
         {#each particles as particle (particle.id)}

@@ -28,6 +28,7 @@ class EditPresentationController extends Controller
                 'url' => route('presentations.embed', ['presentation' => $presentation->embed_token]),
                 'tag' => $this->embeds->customElementTag($presentation->embed_token),
             ],
+            'viewerUrl' => route('presentations.viewer', ['presentation' => $presentation->embed_token]),
         ]);
     }
 }

@@ -64,6 +64,7 @@ test('talk settings can be saved via the update route', function () {
             'talk_settings' => [
                 'showReactions' => true,
                 'showDock' => false,
+                'showTranslation' => false,
                 'timerMode' => 'countdown',
                 'durationMinutes' => 20,
             ],
@@ -75,6 +76,7 @@ test('talk settings can be saved via the update route', function () {
     $stored = PresentationModel::findOrFail($presentation->id);
     expect($stored->talk_settings['showReactions'])->toBeTrue()
         ->and($stored->talk_settings['showDock'])->toBeFalse()
+        ->and($stored->talk_settings['showTranslation'])->toBeFalse()
         ->and($stored->talk_settings['timerMode'])->toBe('countdown')
         ->and($stored->talk_settings['durationMinutes'])->toBe(20);
 });

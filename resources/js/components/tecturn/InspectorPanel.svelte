@@ -9,6 +9,13 @@
     import UploadPresentationBackgroundController from '@/actions/App/Http/Controllers/Presentations/UploadPresentationBackgroundController';
     import LayoutPicker from '@/components/tecturn/LayoutPicker.svelte';
     import { Button } from '@/components/ui/button';
+    import {
+        Dialog,
+        DialogContent,
+        DialogDescription,
+        DialogFooter,
+        DialogTitle,
+    } from '@/components/ui/dialog';
     import { Label } from '@/components/ui/label';
     import type { EditorState } from '@/lib/tecturn/editor-state.svelte';
     import { SUPPORTED_LANGUAGES } from '@/lib/tecturn/shiki';
@@ -25,6 +32,18 @@
     } = $props();
 
     let uploadingBackground = $state(false);
+
+    let deleteBlockDialogOpen = $state(false);
+    let blockIdDeleting = $state<string | null>(null);
+
+    const confirmDeleteBlock = () => {
+        if (blockIdDeleting !== null) {
+            editor.removeBlock(blockIdDeleting);
+        }
+
+        deleteBlockDialogOpen = false;
+        blockIdDeleting = null;
+    };
 
     async function uploadBackgroundImage(event: Event) {
         const input = event.currentTarget as HTMLInputElement;
@@ -315,7 +334,10 @@
         <Button
             variant="destructive"
             size="sm"
-            onclick={() => editor.removeBlock(block.id)}
+            onclick={() => {
+                blockIdDeleting = block.id;
+                deleteBlockDialogOpen = true;
+            }}
             data-test="inspector-delete-block"
         >
             <Trash2 class="h-4 w-4" /> Delete block
@@ -438,3 +460,29 @@
         </p>
     {/if}
 </div>
+
+<Dialog bind:open={deleteBlockDialogOpen}>
+    <DialogContent>
+        <div class="space-y-3">
+            <DialogTitle>Delete block</DialogTitle>
+            <DialogDescription>
+                Delete this block? This cannot be undone.
+            </DialogDescription>
+        </div>
+        <DialogFooter>
+            <Button
+                variant="outline"
+                onclick={() => (deleteBlockDialogOpen = false)}
+            >
+                Cancel
+            </Button>
+            <Button
+                variant="destructive"
+                onclick={confirmDeleteBlock}
+                data-test="inspector-delete-block-confirm"
+            >
+                Delete
+            </Button>
+        </DialogFooter>
+    </DialogContent>
+</Dialog>

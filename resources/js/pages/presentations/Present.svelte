@@ -86,10 +86,12 @@
             />
         </div>
 
-        <YoYoTranslatePanel
-            yoyotranslate={presentation.yoyotranslate}
-            routes={translationRoutes}
-        />
+        {#if presentation.talk_settings.showTranslation}
+            <YoYoTranslatePanel
+                yoyotranslate={presentation.yoyotranslate}
+                routes={translationRoutes}
+            />
+        {/if}
     </div>
 
     <!-- Dock column -->

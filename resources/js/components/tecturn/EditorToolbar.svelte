@@ -1,15 +1,25 @@
 <script lang="ts">
     import { router, page } from '@inertiajs/svelte';
+    import ChevronDown from 'lucide-svelte/icons/chevron-down';
     import CodeXml from 'lucide-svelte/icons/code-xml';
     import Download from 'lucide-svelte/icons/download';
     import Heart from 'lucide-svelte/icons/heart';
+    import Languages from 'lucide-svelte/icons/languages';
     import LayoutPanelLeft from 'lucide-svelte/icons/layout-panel-left';
     import PanelRight from 'lucide-svelte/icons/panel-right';
     import Play from 'lucide-svelte/icons/play';
+    import QrCode from 'lucide-svelte/icons/qr-code';
     import Save from 'lucide-svelte/icons/save';
+    import Settings2 from 'lucide-svelte/icons/settings-2';
     import Workflow from 'lucide-svelte/icons/workflow';
     import { toast } from 'svelte-sonner';
     import { Button } from '@/components/ui/button';
+    import {
+        DropdownMenu,
+        DropdownMenuContent,
+        DropdownMenuItem,
+        DropdownMenuTrigger,
+    } from '@/components/ui/dropdown-menu';
     import { Input } from '@/components/ui/input';
     import type { EditorState } from '@/lib/tecturn/editor-state.svelte';
     import { present, update } from '@/routes/presentations';
@@ -24,6 +34,7 @@
         onExport,
         onExportWebComponent,
         embedSnippet,
+        viewerUrl,
     }: {
         editor: EditorState;
         presentationId: number;
@@ -33,10 +44,12 @@
         onExport: () => void;
         onExportWebComponent: () => Promise<void>;
         embedSnippet: string;
+        viewerUrl: string;
     } = $props();
 
     let showReactions = $state(talkSettings.showReactions);
     let showDock = $state(talkSettings.showDock);
+    let showTranslation = $state(talkSettings.showTranslation);
     let savingTalkSettings = $state(false);
 
     const persistTalkSettings = (
@@ -57,7 +70,14 @@
                 current_team: currentTeam.slug,
                 presentation: presentationId,
             }).url,
-            { talk_settings: { ...talkSettings, showReactions, showDock } },
+            {
+                talk_settings: {
+                    ...talkSettings,
+                    showReactions,
+                    showDock,
+                    showTranslation,
+                },
+            },
             {
                 preserveState: true,
                 onError: rollback,
@@ -80,9 +100,20 @@
             () => (showDock = !showDock),
         );
 
+    const toggleTranslation = () =>
+        persistTalkSettings(
+            () => (showTranslation = !showTranslation),
+            () => (showTranslation = !showTranslation),
+        );
+
     const copyEmbedSnippet = async () => {
         await navigator.clipboard.writeText(embedSnippet);
         toast.success('Embed code copied to clipboard.');
+    };
+
+    const copyViewerUrl = async () => {
+        await navigator.clipboard.writeText(viewerUrl);
+        toast.success('Reaction URL copied to clipboard.');
     };
 
     let saving = $state(false);
@@ -171,33 +202,52 @@
         </Button>
     </div>
 
+    {#snippet toggleRow(
+        label: string,
+        Icon: typeof Heart,
+        checked: boolean,
+        toggle: () => void,
+        testId: string,
+    )}
+        <button
+            type="button"
+            role="menuitemcheckbox"
+            aria-checked={checked}
+            class="flex w-full cursor-pointer select-none items-center gap-2 rounded-sm px-2 py-1.5 text-sm outline-none hover:bg-accent hover:text-accent-foreground"
+            disabled={savingTalkSettings}
+            onclick={toggle}
+            data-test={testId}
+        >
+            <Icon class="h-4 w-4" />
+            {label}
+            <span
+                class="ml-auto text-xs {checked
+                    ? 'font-medium text-primary'
+                    : 'text-muted-foreground'}"
+            >
+                {checked ? 'On' : 'Off'}
+            </span>
+        </button>
+    {/snippet}
+
     <div class="ml-auto flex items-center gap-2">
         <Button
-            variant={showReactions ? 'default' : 'outline'}
+            variant="ghost"
             size="sm"
-            onclick={toggleReactions}
-            disabled={savingTalkSettings}
-            aria-pressed={showReactions}
-            data-test="editor-reactions-toggle"
+            class="text-muted-foreground"
+            onclick={copyViewerUrl}
+            title="Copy the URL the audience uses to react"
+            data-test="editor-copy-viewer-url"
         >
-            <Heart class="h-4 w-4" />
-            Reactions {showReactions ? 'on' : 'off'}
-        </Button>
-
-        <Button
-            variant={showDock ? 'default' : 'outline'}
-            size="sm"
-            onclick={toggleDock}
-            disabled={savingTalkSettings}
-            aria-pressed={showDock}
-            data-test="editor-dock-toggle"
-        >
-            <PanelRight class="h-4 w-4" />
-            Dock {showDock ? 'on' : 'off'}
+            <QrCode class="h-4 w-4" /> Reaction URL
         </Button>
 
         {#if presentUrl}
-            <Button variant="outline" size="sm" asChild>
+            <Button
+                size="sm"
+                class="bg-emerald-600 text-white shadow hover:bg-emerald-500"
+                asChild
+            >
                 {#snippet children(props)}
                     <a
                         {...props}
@@ -212,34 +262,111 @@
             </Button>
         {/if}
 
-        <Button
-            variant="outline"
-            size="sm"
-            onclick={onExport}
-            data-test="editor-export-button"
-        >
-            <Download class="h-4 w-4" /> Export Svelte
-        </Button>
+        <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+                {#snippet children(props)}
+                    <Button
+                        {...props}
+                        variant="outline"
+                        size="sm"
+                        data-test="editor-preferences-menu"
+                    >
+                        <Settings2 class="h-4 w-4" /> Preferences
+                        <ChevronDown class="h-3.5 w-3.5 opacity-60" />
+                    </Button>
+                {/snippet}
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" sideOffset={4} class="w-56">
+                {@render toggleRow(
+                    'Reactions',
+                    Heart,
+                    showReactions,
+                    toggleReactions,
+                    'editor-reactions-toggle',
+                )}
+                {@render toggleRow(
+                    'Dock',
+                    PanelRight,
+                    showDock,
+                    toggleDock,
+                    'editor-dock-toggle',
+                )}
+                {@render toggleRow(
+                    'Live Translation',
+                    Languages,
+                    showTranslation,
+                    toggleTranslation,
+                    'editor-translation-toggle',
+                )}
+            </DropdownMenuContent>
+        </DropdownMenu>
 
-        <Button
-            variant="outline"
-            size="sm"
-            disabled={exportingWebComponent}
-            onclick={exportWebComponent}
-            data-test="editor-export-web-component-button"
-        >
-            <Download class="h-4 w-4" />
-            {exportingWebComponent ? 'Exporting…' : 'Export Web Component'}
-        </Button>
-
-        <Button
-            variant="outline"
-            size="sm"
-            onclick={copyEmbedSnippet}
-            data-test="editor-copy-embed-button"
-        >
-            <CodeXml class="h-4 w-4" /> Copy Embed
-        </Button>
+        <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+                {#snippet children(props)}
+                    <Button
+                        {...props}
+                        variant="outline"
+                        size="sm"
+                        data-test="editor-export-menu"
+                    >
+                        <Download class="h-4 w-4" /> Export
+                        <ChevronDown class="h-3.5 w-3.5 opacity-60" />
+                    </Button>
+                {/snippet}
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" sideOffset={4} class="w-60">
+                <DropdownMenuItem asChild>
+                    {#snippet children(props)}
+                        <button
+                            type="button"
+                            class={props.class}
+                            onclick={() => {
+                                props.onClick?.();
+                                onExport();
+                            }}
+                            data-test="editor-export-button"
+                        >
+                            <Download class="mr-2 h-4 w-4" /> Export Svelte
+                        </button>
+                    {/snippet}
+                </DropdownMenuItem>
+                <DropdownMenuItem asChild>
+                    {#snippet children(props)}
+                        <button
+                            type="button"
+                            class={props.class}
+                            disabled={exportingWebComponent}
+                            onclick={() => {
+                                props.onClick?.();
+                                exportWebComponent();
+                            }}
+                            data-test="editor-export-web-component-button"
+                        >
+                            <Download class="mr-2 h-4 w-4" />
+                            {exportingWebComponent
+                                ? 'Exporting…'
+                                : 'Export Web Component'}
+                        </button>
+                    {/snippet}
+                </DropdownMenuItem>
+                <DropdownMenuItem asChild>
+                    {#snippet children(props)}
+                        <button
+                            type="button"
+                            class={props.class}
+                            onclick={() => {
+                                props.onClick?.();
+                                copyEmbedSnippet();
+                            }}
+                            data-test="editor-copy-embed-button"
+                        >
+                            <CodeXml class="mr-2 h-4 w-4" /> Copy Embed
+                        </button>
+                    {/snippet}
+                </DropdownMenuItem>
+            </DropdownMenuContent>
+        </DropdownMenu>
 
         <Button
             size="sm"

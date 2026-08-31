@@ -12,6 +12,7 @@ readonly class TalkSettings
     public function __construct(
         public bool $showReactions = false,
         public bool $showDock = true,
+        public bool $showTranslation = true,
         public string $timerMode = 'elapsed',
         public ?int $durationMinutes = null,
     ) {}
@@ -24,6 +25,7 @@ readonly class TalkSettings
         return new self(
             showReactions: (bool) ($data['showReactions'] ?? false),
             showDock: (bool) ($data['showDock'] ?? true),
+            showTranslation: (bool) ($data['showTranslation'] ?? true),
             timerMode: in_array($data['timerMode'] ?? 'elapsed', ['elapsed', 'countdown'], true)
                 ? (string) ($data['timerMode'] ?? 'elapsed')
                 : 'elapsed',
@@ -44,6 +46,7 @@ readonly class TalkSettings
         return [
             'showReactions' => $this->showReactions,
             'showDock' => $this->showDock,
+            'showTranslation' => $this->showTranslation,
             'timerMode' => $this->timerMode,
             'durationMinutes' => $this->durationMinutes,
         ];

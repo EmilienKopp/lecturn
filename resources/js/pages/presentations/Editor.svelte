@@ -25,6 +25,7 @@
     let {
         presentation,
         embed,
+        viewerUrl,
     }: {
         presentation: {
             id: number;
@@ -38,6 +39,7 @@
             url: string;
             tag: string;
         };
+        viewerUrl: string;
     } = $props();
 
     // The element must be block-level with a real height — Reveal.js sizes
@@ -108,6 +110,7 @@
         onExport={exportSvelte}
         onExportWebComponent={exportWebComponent}
         {embedSnippet}
+        {viewerUrl}
     />
 
     {#if view === 'flow'}

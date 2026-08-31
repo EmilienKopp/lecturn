@@ -53,6 +53,7 @@ class UpdatePresentationRequest extends FormRequest
             'talk_settings' => ['sometimes', 'array'],
             'talk_settings.showReactions' => ['sometimes', 'boolean'],
             'talk_settings.showDock' => ['sometimes', 'boolean'],
+            'talk_settings.showTranslation' => ['sometimes', 'boolean'],
             'talk_settings.timerMode' => ['sometimes', 'string', Rule::in(['elapsed', 'countdown'])],
             'talk_settings.durationMinutes' => ['sometimes', 'nullable', 'integer', 'min:1', 'max:480'],
         ];

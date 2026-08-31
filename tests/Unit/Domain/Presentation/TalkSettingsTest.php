@@ -8,6 +8,7 @@ it('creates with defaults', function () {
     $settings = TalkSettings::defaults();
 
     expect($settings->showReactions)->toBeFalse()
+        ->and($settings->showTranslation)->toBeTrue()
         ->and($settings->timerMode)->toBe('elapsed')
         ->and($settings->durationMinutes)->toBeNull();
 });
@@ -15,11 +16,13 @@ it('creates with defaults', function () {
 it('hydrates from array', function () {
     $settings = TalkSettings::fromArray([
         'showReactions' => true,
+        'showTranslation' => false,
         'timerMode' => 'countdown',
         'durationMinutes' => 30,
     ]);
 
     expect($settings->showReactions)->toBeTrue()
+        ->and($settings->showTranslation)->toBeFalse()
         ->and($settings->timerMode)->toBe('countdown')
         ->and($settings->durationMinutes)->toBe(30);
 });
@@ -41,7 +44,7 @@ it('serialises to array', function () {
 });
 
 it('roundtrips through fromArray and toArray', function () {
-    $original = ['showReactions' => false, 'showDock' => true, 'timerMode' => 'elapsed', 'durationMinutes' => null];
+    $original = ['showReactions' => false, 'showDock' => true, 'showTranslation' => true, 'timerMode' => 'elapsed', 'durationMinutes' => null];
 
     expect(TalkSettings::fromArray($original)->toArray())->toEqual($original);
 });

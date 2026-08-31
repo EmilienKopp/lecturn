@@ -1,4 +1,6 @@
 <script lang="ts">
+    import Check from 'lucide-svelte/icons/check';
+    import Copy from 'lucide-svelte/icons/copy';
     import type { TalkSettings } from '@/types/generated';
 
     let {
@@ -66,6 +68,14 @@
     const qrUrl = $derived(
         `https://api.qrserver.com/v1/create-qr-code/?size=180x180&margin=4&data=${encodeURIComponent(viewerUrl)}`,
     );
+
+    let copiedViewerUrl = $state(false);
+
+    const copyViewerUrl = async () => {
+        await navigator.clipboard.writeText(viewerUrl);
+        copiedViewerUrl = true;
+        setTimeout(() => (copiedViewerUrl = false), 2000);
+    };
 </script>
 
 <aside
@@ -106,9 +116,20 @@
                 height="180"
             />
         </div>
-        <p class="mt-2 truncate text-center text-[10px] text-zinc-400">
-            {viewerUrl}
-        </p>
+        <button
+            type="button"
+            class="mt-2 flex w-full items-center justify-center gap-1 rounded px-1 py-0.5 text-[10px] text-zinc-400 transition-colors hover:bg-zinc-100 hover:text-zinc-600"
+            onclick={copyViewerUrl}
+            title="Copy reaction URL"
+            data-test="dock-copy-viewer-url"
+        >
+            {#if copiedViewerUrl}
+                <Check class="h-3 w-3 shrink-0 text-emerald-500" /> Copied!
+            {:else}
+                <Copy class="h-3 w-3 shrink-0" />
+                <span class="truncate">{viewerUrl}</span>
+            {/if}
+        </button>
     </section>
 
     <!-- Reactions -->

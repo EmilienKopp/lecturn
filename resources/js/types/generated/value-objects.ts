@@ -136,6 +136,7 @@ export type SlideLayout =
 export type TalkSettings = {
     readonly showReactions: boolean;
     readonly showDock: boolean;
+    readonly showTranslation: boolean;
     readonly timerMode: string;
     readonly durationMinutes: number | null;
 };
