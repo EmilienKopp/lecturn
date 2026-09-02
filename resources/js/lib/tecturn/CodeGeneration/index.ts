@@ -13,6 +13,7 @@ import type { FlowGraph, PresentationContent } from '@/types/generated';
 import { CodegenContainer } from './Container.ts';
 import { ParagraphRenderer, defaultBlockPlugins } from './plugins/blocks.ts';
 import { defaultLayoutPlugins } from './plugins/layouts.ts';
+import type { CodegenOptions } from './PresentationToCode.ts';
 import { PresentationToCode } from './PresentationToCode.ts';
 
 export * from './contracts.ts';
@@ -33,11 +34,20 @@ export function createDefaultContainer(): CodegenContainer {
 /**
  * Compile a Tecturn presentation document into an Animotion-compatible
  * Svelte component (single-file output).
+ *
+ * `options.fonts` controls font loading: 'import' (default) embeds a Bunny
+ * `@import` so the source is self-contained, 'none' emits only `font-family`
+ * declarations (the web-component export inlines the fonts itself instead).
  */
 export function generatePresentationSvelte(
     rawContent: PresentationContent,
     rawFlow: FlowGraph | null = null,
+    options: CodegenOptions = {},
     container: CodegenContainer = createDefaultContainer(),
 ): string {
-    return new PresentationToCode(container).generate(rawContent, rawFlow);
+    return new PresentationToCode(container).generate(
+        rawContent,
+        rawFlow,
+        options,
+    );
 }

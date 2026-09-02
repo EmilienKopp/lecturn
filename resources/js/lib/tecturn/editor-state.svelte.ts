@@ -1401,6 +1401,7 @@ export class EditorState {
             style: {
                 fontSize: null,
                 fontWeight: null,
+                fontFamily: null,
                 color: null,
                 borderColor: null,
                 backgroundColor: null,
@@ -1427,6 +1428,7 @@ export class EditorState {
             style: {
                 fontSize: null,
                 fontWeight: null,
+                fontFamily: null,
                 color: null,
                 borderColor: null,
                 backgroundColor: null,

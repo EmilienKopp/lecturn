@@ -18,6 +18,7 @@
     } from '@/components/ui/dialog';
     import { Label } from '@/components/ui/label';
     import type { EditorState } from '@/lib/tecturn/editor-state.svelte';
+    import { FONTS } from '@/lib/tecturn/fonts';
     import { SUPPORTED_LANGUAGES } from '@/lib/tecturn/shiki';
     import { uploadImage, xsrfToken } from '@/lib/tecturn/uploads';
 
@@ -277,6 +278,29 @@
                     <option value="">Default</option>
                     {#each fontWeights as weight (weight)}
                         <option value={weight}>{weight}</option>
+                    {/each}
+                </select>
+            </div>
+
+            <div class="space-y-1">
+                <Label for="block-font-family" class="text-xs">Font</Label>
+                <select
+                    id="block-font-family"
+                    class="w-full rounded-md border bg-background px-2 py-1.5 text-sm"
+                    value={block.style.fontFamily ?? ''}
+                    onchange={(event) =>
+                        editor.updateBlockStyle(block.id, {
+                            fontFamily: event.currentTarget.value || null,
+                        })}
+                    data-test="inspector-font-family"
+                >
+                    <option value="">Default</option>
+                    {#each FONTS as font (font.label)}
+                        <option
+                            value={font.label}
+                            style="font-family: {font.stack}"
+                            >{font.label}</option
+                        >
                     {/each}
                 </select>
             </div>

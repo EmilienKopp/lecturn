@@ -9,6 +9,7 @@ readonly class BlockStyle
     public function __construct(
         public ?string $fontSize = null,
         public ?string $fontWeight = null,
+        public ?string $fontFamily = null,
         public ?string $color = null,
         public ?string $borderColor = null,
         public ?string $backgroundColor = null,
@@ -26,6 +27,7 @@ readonly class BlockStyle
         return new self(
             fontSize: isset($data['fontSize']) ? (string) $data['fontSize'] : null,
             fontWeight: isset($data['fontWeight']) ? (string) $data['fontWeight'] : null,
+            fontFamily: isset($data['fontFamily']) ? (string) $data['fontFamily'] : null,
             color: isset($data['color']) ? (string) $data['color'] : null,
             borderColor: isset($data['borderColor']) ? (string) $data['borderColor'] : null,
             backgroundColor: isset($data['backgroundColor']) ? (string) $data['backgroundColor'] : null,
@@ -44,6 +46,7 @@ readonly class BlockStyle
         return array_filter([
             'fontSize' => $this->fontSize,
             'fontWeight' => $this->fontWeight,
+            'fontFamily' => $this->fontFamily,
             'color' => $this->color,
             'borderColor' => $this->borderColor,
             'backgroundColor' => $this->backgroundColor,

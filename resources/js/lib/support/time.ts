@@ -4,6 +4,7 @@ interface TimeBreakdown {
     hours: () => number;
     days: () => number;
     milliseconds: () => number;
+    promise: () => Promise<void>;
 }
 
 export function ms(milliseconds: number): TimeBreakdown {
@@ -13,6 +14,8 @@ export function ms(milliseconds: number): TimeBreakdown {
         hours: () => milliseconds / 1000 / 60 / 60,
         days: () => milliseconds / 1000 / 60 / 60 / 24,
         milliseconds: () => milliseconds,
+        promise: () =>
+            new Promise((resolve) => setTimeout(resolve, milliseconds)),
     };
 }
 

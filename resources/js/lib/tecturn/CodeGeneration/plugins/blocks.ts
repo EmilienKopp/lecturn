@@ -1,5 +1,6 @@
 import type { Block } from '@/types/generated';
 import type { CodePage } from '../../flow-compiler.ts';
+import { fontStack } from '../../fonts.ts';
 import type {
     BlockRendererPlugin,
     CodegenPlugin,
@@ -141,6 +142,7 @@ export class BoxRenderer implements BlockRendererPlugin {
 
     render(block: Block, depth: number): string {
         const pad = INDENT.repeat(depth);
+        const family = fontStack(block.style.fontFamily);
         const style = [
             block.style.borderColor
                 ? `border: 2px solid ${block.style.borderColor};`
@@ -148,6 +150,7 @@ export class BoxRenderer implements BlockRendererPlugin {
             block.style.backgroundColor
                 ? `background: ${block.style.backgroundColor};`
                 : '',
+            family ? `font-family: ${family};` : '',
         ]
             .filter(Boolean)
             .join(' ');
@@ -167,11 +170,13 @@ export class ParagraphRenderer implements BlockRendererPlugin {
     }
 
     private styleAttribute(block: Block): string {
+        const family = fontStack(block.style.fontFamily);
         const parts = [
             block.style.fontSize ? `font-size: ${block.style.fontSize};` : '',
             block.style.fontWeight
                 ? `font-weight: ${block.style.fontWeight};`
                 : '',
+            family ? `font-family: ${family};` : '',
             block.style.color ? `color: ${block.style.color};` : '',
         ].filter(Boolean);
 

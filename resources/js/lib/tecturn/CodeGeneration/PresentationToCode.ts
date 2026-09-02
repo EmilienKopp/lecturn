@@ -13,10 +13,16 @@ import {
     migrateLegacyTransitions,
     stepIndexBySlide,
 } from '../flow-compiler.ts';
+import { bunnyImportCss } from '../fonts.ts';
 import type { CodegenContainer } from './Container.ts';
 import type { BlockRendererPlugin, RenderContext } from './contracts.ts';
 import { ANIMOTION_IMPORT_ORDER } from './contracts.ts';
 import { INDENT, escapeAttribute } from './support.ts';
+
+/** How the generated source should load its fonts. See generatePresentationSvelte. */
+export type CodegenOptions = {
+    fonts?: 'import' | 'none';
+};
 
 /**
  * The engine: compiles a Tecturn presentation document into an
@@ -35,6 +41,7 @@ export class PresentationToCode {
     generate(
         rawContent: PresentationContent,
         rawFlow: FlowGraph | null = null,
+        options: CodegenOptions = {},
     ): string {
         const { content, flow } = migrateLegacyTransitions(
             rawContent,
@@ -135,7 +142,14 @@ export class PresentationToCode {
                       .join('\n')}`
                 : '';
 
+        // 'import' (default) makes the standalone Svelte export self-contained
+        // by pulling the used fonts from Bunny; the web-component export passes
+        // 'none' and inlines the woff2 itself (scripts/present.mjs).
+        const fontImport =
+            options.fonts === 'none' ? null : bunnyImportCss(content);
+
         const styles = [
+            ...(fontImport ? [`${INDENT}${fontImport}`] : []),
             ...this.layoutCss(content),
             ...[...usedBlockRenderers].flatMap((renderer) => {
                 const css = renderer.css?.();
@@ -163,13 +177,19 @@ ${styles}
         rc: RenderContext,
         backgroundImage: string | null,
     ): string {
-        // A slide's own color wins; otherwise the deck-wide image is the backdrop.
+        // Mirror the live Presenter: a slide's own color wins, otherwise the
+        // deck-wide image is the backdrop, otherwise white. These must go through
+        // Animotion's `background`/`image` props (Reveal paints them on its
+        // separate `.slide-background` element) — an inline `style="background"`
+        // lands on the transparent slide section and never shows.
         let backgroundAttr = '';
 
         if (slide.background) {
-            backgroundAttr = ` style="background: ${escapeAttribute(slide.background)}"`;
+            backgroundAttr = ` background="${escapeAttribute(slide.background)}"`;
         } else if (backgroundImage) {
             backgroundAttr = ` image="${escapeAttribute(backgroundImage)}"`;
+        } else {
+            backgroundAttr = ` background="#ffffff"`;
         }
 
         const lines: string[] = [

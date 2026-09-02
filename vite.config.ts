@@ -50,13 +50,22 @@ export default defineConfig({
             refresh: true,
             fonts: [
                 bunny('Instrument Sans', {
-                    weights: [400, 500, 600],
+                    weights: [400, 500, 600, 700],
+                }),
+                bunny('Inter', {
+                    weights: [400, 500, 600, 700],
                 }),
                 bunny('Bricolage Grotesque', {
-                    weights: [500, 600, 700],
+                    weights: [400, 500, 600, 700],
+                }),
+                bunny('Anton', {
+                    weights: [400],
+                }),
+                bunny('Lora', {
+                    weights: [400, 500, 600, 700],
                 }),
                 bunny('JetBrains Mono', {
-                    weights: [400, 500],
+                    weights: [400, 500, 600, 700],
                 }),
             ],
         }),

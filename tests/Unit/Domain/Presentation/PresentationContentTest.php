@@ -267,3 +267,32 @@ it('round-trips a free-layout slide with block position styles', function () {
     expect($style)->toBe(['x' => '12.5', 'y' => '20', 'width' => '30'])
         ->and($style)->not->toHaveKey('height');
 });
+
+it('round-trips a block font family', function () {
+    $data = [
+        'version' => '1.0',
+        'slides' => [
+            [
+                'id' => 'slide-1',
+                'layout' => 'free',
+                'background' => '#ffffff',
+                'slots' => [
+                    'main' => [
+                        [
+                            'id' => 'block-1',
+                            'type' => 'text',
+                            'content' => 'Typeset',
+                            'style' => ['fontFamily' => 'Lora', 'fontWeight' => 'bold'],
+                            'transition' => null,
+                        ],
+                    ],
+                ],
+            ],
+        ],
+    ];
+
+    $content = PresentationContent::fromArray($data);
+    $style = $content->toArray()['slides'][0]['slots']['main'][0]['style'];
+
+    expect($style)->toBe(['fontWeight' => 'bold', 'fontFamily' => 'Lora']);
+});

@@ -1,14 +1,17 @@
-<script lang="ts">
-    import type { Snippet } from 'svelte';
-    import { cn } from '@/lib/utils';
-
-    type Variant =
+<script lang="ts" module>
+    export type Variant =
         | 'default'
         | 'secondary'
         | 'ghost'
         | 'destructive'
         | 'outline'
         | 'link';
+</script>
+<script lang="ts">
+    import type { Snippet } from 'svelte';
+    import { cn } from '@/lib/utils';
+
+
     type Size = 'default' | 'sm' | 'lg' | 'icon';
     type AsChildProps = {
         class?: string;

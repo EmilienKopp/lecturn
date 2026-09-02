@@ -1,5 +1,6 @@
 <script lang="ts">
     import type { EditorState } from '@/lib/tecturn/editor-state.svelte';
+    import { fontStack } from '@/lib/tecturn/fonts';
     import type { Block } from '@/types/generated';
 
     let { editor, block }: { editor: EditorState; block: Block } = $props();
@@ -9,6 +10,9 @@
             block.style.fontSize ? `font-size: ${block.style.fontSize};` : '',
             block.style.fontWeight
                 ? `font-weight: ${block.style.fontWeight};`
+                : '',
+            fontStack(block.style.fontFamily)
+                ? `font-family: ${fontStack(block.style.fontFamily)};`
                 : '',
             block.style.color ? `color: ${block.style.color};` : '',
         ]

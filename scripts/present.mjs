@@ -29,7 +29,39 @@ async function readStdin() {
     return data;
 }
 
-async function buildWebComponent(source, tag) {
+/**
+ * Base64 `@font-face` rules for the fonts a deck uses, read from the vendored
+ * woff2 (resources/fonts/embed, see scripts/fetch-embed-fonts.mjs). Inlining
+ * keeps the embedded component self-contained — it renders with no network.
+ */
+function embedFontFaceCss(content, usedFonts) {
+    const rules = [];
+
+    for (const { font, weights } of usedFonts(content)) {
+        for (const weight of weights) {
+            const file = path.join(
+                root,
+                'resources/fonts/embed',
+                `${font.slug}-${weight}.woff2`,
+            );
+
+            if (!fs.existsSync(file)) {
+                continue;
+            }
+
+            const base64 = fs.readFileSync(file).toString('base64');
+            rules.push(
+                `@font-face{font-family:'${font.label}';font-style:normal;` +
+                    `font-weight:${weight};font-display:swap;` +
+                    `src:url(data:font/woff2;base64,${base64}) format('woff2');}`,
+            );
+        }
+    }
+
+    return rules.join('\n');
+}
+
+async function buildWebComponent(source, tag, fontFaceCss = '') {
     const { build } = await import('vite');
     const { svelte } = await import('@sveltejs/vite-plugin-svelte');
 
@@ -83,8 +115,12 @@ async function buildWebComponent(source, tag) {
             .map((o) => o.source)
             .join('\n');
 
-        const cssInjector = css
-            ? `(function(){var s=document.createElement('style');s.textContent=${JSON.stringify(css)};document.head.appendChild(s);})();\n`
+        // Fonts first so their @font-face rules are defined before the deck's
+        // styles reference them.
+        const allCss = [fontFaceCss, css].filter(Boolean).join('\n');
+
+        const cssInjector = allCss
+            ? `(function(){var s=document.createElement('style');s.textContent=${JSON.stringify(allCss)};document.head.appendChild(s);})();\n`
             : '';
 
         return cssInjector + js;
@@ -99,15 +135,28 @@ try {
     // Node 22.18+ runs TypeScript directly via type stripping.
     const { generatePresentationSvelte } =
         await import('../resources/js/lib/tecturn/codegen.ts');
-    const source = generatePresentationSvelte(content, flow ?? null);
+    const { usedFonts } = await import(
+        '../resources/js/lib/tecturn/fonts.ts'
+    );
 
     switch (format) {
         case 'svelte':
-            process.stdout.write(source);
+            // Self-contained source: fonts pulled from Bunny via @import.
+            process.stdout.write(
+                generatePresentationSvelte(content, flow ?? null),
+            );
             break;
         case 'web-component':
+            // No @import; the used fonts are base64-inlined instead so the
+            // embed renders offline.
             process.stdout.write(
-                await buildWebComponent(source, tag ?? 'tecturn-presentation'),
+                await buildWebComponent(
+                    generatePresentationSvelte(content, flow ?? null, {
+                        fonts: 'none',
+                    }),
+                    tag ?? 'tecturn-presentation',
+                    embedFontFaceCss(content, usedFonts),
+                ),
             );
             break;
         default:

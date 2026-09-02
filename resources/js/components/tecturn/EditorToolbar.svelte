@@ -13,6 +13,7 @@
     import Settings2 from 'lucide-svelte/icons/settings-2';
     import Workflow from 'lucide-svelte/icons/workflow';
     import { toast } from 'svelte-sonner';
+    import Confirm from '@/components/feedback/Confirm.svelte';
     import { Button } from '@/components/ui/button';
     import {
         DropdownMenu,
@@ -57,6 +58,7 @@
     let savingTalkSettings = $state(false);
     let autoSave = $state(talkSettings.autoSave ?? false);
     let saving = $state(promise());
+    let confirmModal: Confirm;
 
     const AUTO_SAVE_INTERVAL = ms(10_000);
 
@@ -123,8 +125,22 @@
     };
 
     const copyEmbedSnippet = async () => {
-        await navigator.clipboard.writeText(embedSnippet);
-        toast.success('Embed code copied to clipboard.');
+        const copy = async () => {
+            await navigator.clipboard.writeText(embedSnippet);
+            toast.success('Embed code copied to clipboard.');
+        };
+
+        if (showDock) {
+            confirmModal?.confirm({
+                title: 'Dock will not be included in an embed snippet.',
+                text: 'Are you sure you want to continue without the dock?',
+                onConfirm: () => {
+                    copy();
+                },
+            });
+        } else {
+            copy();
+        }
     };
 
     const copyViewerUrl = async () => {
@@ -423,3 +439,5 @@
         </Button>
     </div>
 </div>
+
+<Confirm bind:this={confirmModal} />

@@ -333,6 +333,98 @@ test('a presentation can be exported as a web component', function () {
     expect($response->streamedContent())->toContain('tecturn-presentation');
 });
 
+test('a text block font family exports as font-family plus a Bunny @import', function () {
+    $user = User::factory()->create();
+    $presentation = PresentationModel::factory()->create([
+        'team_id' => $user->currentTeam->id,
+        'name' => 'Typeset Deck',
+        'content' => [
+            'version' => '1.0',
+            'slides' => [
+                [
+                    'id' => 'slide-1',
+                    'layout' => 'free',
+                    'background' => '#ffffff',
+                    'slots' => [
+                        'main' => [
+                            [
+                                'id' => 'block-1',
+                                'type' => 'text',
+                                'content' => 'Bold statement',
+                                'style' => ['fontFamily' => 'Anton', 'fontWeight' => 'bold'],
+                                'transition' => null,
+                            ],
+                        ],
+                    ],
+                ],
+            ],
+        ],
+    ]);
+
+    $response = $this
+        ->actingAs($user)
+        ->get(route('presentations.export', [
+            'current_team' => $user->currentTeam->slug,
+            'presentation' => $presentation->id,
+            'format' => 'svelte',
+        ]));
+
+    $response->assertOk();
+
+    // The standalone Svelte source is self-contained: the used font is declared
+    // on the block and pulled from Bunny so the file renders anywhere.
+    expect($response->streamedContent())
+        ->toContain("font-family: 'Anton'")
+        ->toContain('fonts.bunny.net/css?family=anton:400');
+});
+
+test('the web component inlines the used fonts and makes no external font calls', function () {
+    $user = User::factory()->create();
+    $presentation = PresentationModel::factory()->create([
+        'team_id' => $user->currentTeam->id,
+        'name' => 'Typeset Deck',
+        'content' => [
+            'version' => '1.0',
+            'slides' => [
+                [
+                    'id' => 'slide-1',
+                    'layout' => 'free',
+                    'background' => '#ffffff',
+                    'slots' => [
+                        'main' => [
+                            [
+                                'id' => 'block-1',
+                                'type' => 'text',
+                                'content' => 'Bold statement',
+                                'style' => ['fontFamily' => 'Anton'],
+                                'transition' => null,
+                            ],
+                        ],
+                    ],
+                ],
+            ],
+        ],
+    ]);
+
+    $response = $this
+        ->actingAs($user)
+        ->get(route('presentations.export', [
+            'current_team' => $user->currentTeam->slug,
+            'presentation' => $presentation->id,
+            'format' => 'web-component',
+        ]));
+
+    $response->assertOk();
+
+    // The embed must render offline: the font is base64-inlined as an
+    // @font-face, and nothing points back at Bunny.
+    expect($response->streamedContent())
+        ->toContain("font-family: 'Anton'")
+        ->toContain('@font-face')
+        ->toContain('data:font/woff2;base64')
+        ->not->toContain('fonts.bunny.net');
+});
+
 test('an unknown export format is rejected', function () {
     $user = User::factory()->create();
     $presentation = PresentationModel::factory()->create(['team_id' => $user->currentTeam->id]);

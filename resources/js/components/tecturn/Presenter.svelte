@@ -17,6 +17,7 @@
         migrateLegacyTransitions,
         stepIndexBySlide,
     } from '@/lib/tecturn/flow-compiler';
+    import { fontStack } from '@/lib/tecturn/fonts';
     import { FREE_DEFAULTS } from '@/lib/tecturn/free-drag';
     import { layoutDefinitions } from '@/lib/tecturn/layouts';
     import type {
@@ -83,6 +84,9 @@
             block.style.fontSize ? `font-size: ${block.style.fontSize};` : '',
             block.style.fontWeight
                 ? `font-weight: ${block.style.fontWeight};`
+                : '',
+            fontStack(block.style.fontFamily)
+                ? `font-family: ${fontStack(block.style.fontFamily)};`
                 : '',
             block.style.color ? `color: ${block.style.color};` : '',
         ]

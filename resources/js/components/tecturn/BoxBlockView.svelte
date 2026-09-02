@@ -1,5 +1,6 @@
 <script lang="ts">
     import type { EditorState } from '@/lib/tecturn/editor-state.svelte';
+    import { fontStack } from '@/lib/tecturn/fonts';
     import type { Block } from '@/types/generated';
 
     let { editor, block }: { editor: EditorState; block: Block } = $props();
@@ -31,7 +32,9 @@
         'hsl(var(--border))'}; background-color: {block.style.backgroundColor ??
         'transparent'}; color: {block.style.color ??
         'inherit'}; font-size: {block.style.fontSize ?? ''}; font-weight: {block
-        .style.fontWeight ?? ''};"
+        .style.fontWeight ?? ''}; font-family: {fontStack(
+        block.style.fontFamily,
+    ) ?? 'inherit'};"
     onclick={(e) => {
         e.stopPropagation();
         editor.selectedBlockId = block.id;

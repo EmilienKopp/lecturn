@@ -1,1 +1,2 @@
 export { default as Button } from './Button.svelte';
+export type { Variant } from './Button.svelte';
