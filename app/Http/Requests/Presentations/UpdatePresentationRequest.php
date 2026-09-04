@@ -57,6 +57,14 @@ class UpdatePresentationRequest extends FormRequest
             'talk_settings.timerMode' => ['sometimes', 'string', Rule::in(['elapsed', 'countdown'])],
             'talk_settings.durationMinutes' => ['sometimes', 'nullable', 'integer', 'min:1', 'max:480'],
             'talk_settings.autoSave' => ['sometimes', 'boolean'],
+            'talk_settings.footer' => ['sometimes', 'array'],
+            'talk_settings.footer.enabled' => ['sometimes', 'boolean'],
+            'talk_settings.footer.xHandle' => ['sometimes', 'nullable', 'string', 'max:100'],
+            'talk_settings.footer.githubHandle' => ['sometimes', 'nullable', 'string', 'max:100'],
+            'talk_settings.footer.hashtag' => ['sometimes', 'nullable', 'string', 'max:100'],
+            'talk_settings.footer.bgColor' => ['sometimes', 'string', 'max:32'],
+            'talk_settings.footer.fontColor' => ['sometimes', 'string', 'max:32'],
+            'talk_settings.footer.showInDock' => ['sometimes', 'boolean'],
         ];
     }
 }

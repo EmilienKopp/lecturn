@@ -6,10 +6,13 @@ use App\Http\Controllers\Presentations\DeletePresentationBackgroundController;
 use App\Http\Controllers\Presentations\DeletePresentationController;
 use App\Http\Controllers\Presentations\EditPresentationController;
 use App\Http\Controllers\Presentations\EmbedPresentationController;
+use App\Http\Controllers\Presentations\EndSessionController;
 use App\Http\Controllers\Presentations\ExportPresentationController;
 use App\Http\Controllers\Presentations\ListPresentationsController;
 use App\Http\Controllers\Presentations\PresentPresentationController;
+use App\Http\Controllers\Presentations\RecordReactionsController;
 use App\Http\Controllers\Presentations\SendReactionController;
+use App\Http\Controllers\Presentations\StartSessionController;
 use App\Http\Controllers\Presentations\StartTranslationSessionController;
 use App\Http\Controllers\Presentations\StopTranslationSessionController;
 use App\Http\Controllers\Presentations\UpdatePresentationController;
@@ -34,6 +37,10 @@ Route::post('present/{presentation:embed_token}/reactions', SendReactionControll
     ->middleware('throttle:60,1')
     ->name('presentations.reactions');
 
+Route::post('present/{presentation:embed_token}/reactions/batch', RecordReactionsController::class)
+    ->middleware('throttle:60,1')
+    ->name('presentations.reactions.batch');
+
 Route::prefix('{current_team}')
     ->middleware(['auth', ValidateSessionWithWorkOS::class, EnsureTeamMembership::class])
     ->scopeBindings()
@@ -44,6 +51,10 @@ Route::prefix('{current_team}')
         Route::post('presentations', CreatePresentationController::class)->name('presentations.store');
         Route::get('presentations/{presentation}', EditPresentationController::class)->name('presentations.edit');
         Route::get('presentations/{presentation}/present', PresentPresentationController::class)->name('presentations.present');
+        Route::post('presentations/{presentation}/session', StartSessionController::class)->name('presentations.session.start');
+        // POST (not DELETE) so the presenter's unload handler can close the
+        // session via navigator.sendBeacon, which only issues POST requests.
+        Route::post('presentations/{presentation}/session/close', EndSessionController::class)->name('presentations.session.end');
         Route::post('presentations/{presentation}/translation-session', StartTranslationSessionController::class)->name('presentations.translation-session.start');
         Route::delete('presentations/{presentation}/translation-session', StopTranslationSessionController::class)->name('presentations.translation-session.stop');
         Route::get('presentations/{presentation}/export', ExportPresentationController::class)->name('presentations.export');

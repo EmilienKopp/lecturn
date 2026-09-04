@@ -72,6 +72,37 @@
                 <InputError class="mt-2" message={errors.email} />
             </div>
 
+            <div class="grid gap-2">
+                <Label for="social_x_handle">X handle</Label>
+                <Input
+                    id="social_x_handle"
+                    name="social_x_handle"
+                    class="mt-1 block w-full"
+                    value={user.social_x_handle ?? ''}
+                    autocomplete="off"
+                    placeholder="yourhandle"
+                    data-test="profile-x-handle"
+                />
+                <InputError class="mt-2" message={errors.social_x_handle} />
+            </div>
+
+            <div class="grid gap-2">
+                <Label for="social_github_handle">GitHub handle</Label>
+                <Input
+                    id="social_github_handle"
+                    name="social_github_handle"
+                    class="mt-1 block w-full"
+                    value={user.social_github_handle ?? ''}
+                    autocomplete="off"
+                    placeholder="yourhandle"
+                    data-test="profile-github-handle"
+                />
+                <InputError
+                    class="mt-2"
+                    message={errors.social_github_handle}
+                />
+            </div>
+
             <div class="flex items-center gap-4">
                 <Button
                     type="submit"

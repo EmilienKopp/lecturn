@@ -71,6 +71,15 @@ disabled?: boolean,
 },
 };
 export type FlowNodeType = 'slide' | 'transition' | 'code-action';
+export type FooterSettings = {
+readonly enabled: boolean,
+readonly xHandle: string | null,
+readonly githubHandle: string | null,
+readonly hashtag: string | null,
+readonly bgColor: string,
+readonly fontColor: string,
+readonly showInDock: boolean,
+};
 export type LengthAwarePaginator<TKey, TValue> = {
 data: TKey extends string ? Record<TKey, TValue> : TValue[],
 links: {
@@ -119,6 +128,7 @@ readonly showTranslation: boolean,
 readonly timerMode: string,
 readonly durationMinutes: number | null,
 readonly autoSave: boolean,
+readonly footer: FooterSettings,
 };
 export type Transition = {
 readonly nodeId: string | null,

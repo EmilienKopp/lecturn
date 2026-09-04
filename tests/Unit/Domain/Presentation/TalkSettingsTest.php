@@ -44,7 +44,23 @@ it('serialises to array', function () {
 });
 
 it('roundtrips through fromArray and toArray', function () {
-    $original = ['showReactions' => false, 'showDock' => true, 'showTranslation' => true, 'timerMode' => 'elapsed', 'durationMinutes' => null];
+    $original = [
+        'showReactions' => false,
+        'showDock' => true,
+        'showTranslation' => true,
+        'timerMode' => 'elapsed',
+        'durationMinutes' => null,
+        'autoSave' => false,
+        'footer' => [
+            'enabled' => false,
+            'xHandle' => null,
+            'githubHandle' => null,
+            'hashtag' => null,
+            'bgColor' => 'transparent',
+            'fontColor' => '#ffffff',
+            'showInDock' => false,
+        ],
+    ];
 
     expect(TalkSettings::fromArray($original)->toArray())->toEqual($original);
 });

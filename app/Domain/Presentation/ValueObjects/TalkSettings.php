@@ -16,6 +16,7 @@ readonly class TalkSettings
         public string $timerMode = 'elapsed',
         public ?int $durationMinutes = null,
         public bool $autoSave = false,
+        public FooterSettings $footer = new FooterSettings,
     ) {}
 
     /**
@@ -34,6 +35,7 @@ readonly class TalkSettings
                 ? (int) $data['durationMinutes']
                 : null,
             autoSave: (bool) ($data['autoSave'] ?? false),
+            footer: FooterSettings::fromArray(is_array($data['footer'] ?? null) ? $data['footer'] : []),
         );
     }
 
@@ -52,6 +54,7 @@ readonly class TalkSettings
             'timerMode' => $this->timerMode,
             'durationMinutes' => $this->durationMinutes,
             'autoSave' => $this->autoSave,
+            'footer' => $this->footer->toArray(),
         ];
     }
 }

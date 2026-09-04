@@ -1,10 +1,13 @@
 <script lang="ts">
+    import { onMount } from 'svelte';
     import AppHead from '@/components/AppHead.svelte';
     import FloatingReactions from '@/components/tecturn/FloatingReactions.svelte';
     import Presenter from '@/components/tecturn/Presenter.svelte';
     import PresenterDock from '@/components/tecturn/PresenterDock.svelte';
+    import PresentFooter from '@/components/tecturn/PresentFooter.svelte';
     import YoYoTranslatePanel from '@/components/tecturn/YoYoTranslatePanel.svelte';
     import { getEcho } from '@/lib/echo';
+    import { beaconPost } from '@/lib/tecturn/beacon';
     import type {
         FlowGraph,
         PresentationContent,
@@ -15,6 +18,7 @@
     let {
         presentation,
         viewerUrl,
+        sessionRoutes,
         translationRoutes,
     }: {
         presentation: {
@@ -28,6 +32,7 @@
             yoyotranslate: YoYoTranslateInfo;
         };
         viewerUrl: string;
+        sessionRoutes: { start: string; close: string };
         translationRoutes: { start: string; stop: string };
     } = $props();
 
@@ -41,6 +46,10 @@
     let recentReactions = $state<{ id: number; emoji: string }[]>([]);
     let reactionCounter = 0;
 
+    // Live stats shown in the dock, fed by the presentation broadcast channel.
+    let viewerCount = $state(0);
+    let reactionTotal = $state(0);
+
     $effect(() => {
         const channelName = `presentation.${presentation.embed_token}`;
 
@@ -48,13 +57,32 @@
             .channel(channelName)
             .listen('.reaction.sent', (event: { emoji: string }) => {
                 floatingReactions?.spawnReaction(event.emoji);
+                reactionTotal += 1;
                 recentReactions = [
                     ...recentReactions,
                     { id: ++reactionCounter, emoji: event.emoji },
                 ].slice(-30);
+            })
+            .listen('.viewer.presence', (event: { count: number }) => {
+                viewerCount = event.count;
             });
 
         return () => getEcho().leave(channelName);
+    });
+
+    // A live session opens while the presenter is on this page and closes when
+    // they leave, so reactions and viewers are attributed to a real talk.
+    onMount(() => {
+        beaconPost(sessionRoutes.start);
+
+        const close = (): void => beaconPost(sessionRoutes.close);
+
+        window.addEventListener('pagehide', close);
+
+        return () => {
+            window.removeEventListener('pagehide', close);
+            close();
+        };
     });
 </script>
 
@@ -84,6 +112,13 @@
                 bind:this={floatingReactions}
                 enabled={showReactions}
             />
+
+            {#if presentation.talk_settings.footer.enabled && !presentation.talk_settings.footer.showInDock}
+                <PresentFooter
+                    footer={presentation.talk_settings.footer}
+                    variant="overlay"
+                />
+            {/if}
         </div>
 
         {#if presentation.talk_settings.showTranslation}
@@ -101,6 +136,8 @@
             talkSettings={presentation.talk_settings}
             {slideCount}
             {recentReactions}
+            {viewerCount}
+            {reactionTotal}
             bind:showReactions
         />
     {/if}

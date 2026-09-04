@@ -1,8 +1,11 @@
 <script lang="ts">
     import { useHttp } from '@inertiajs/svelte';
+    import { onMount } from 'svelte';
+    import RecordReactionsController from '@/actions/App/Http/Controllers/Presentations/RecordReactionsController';
     import SendReactionController from '@/actions/App/Http/Controllers/Presentations/SendReactionController';
     import AppHead from '@/components/AppHead.svelte';
     import FloatingReactions from '@/components/tecturn/FloatingReactions.svelte';
+    import { beaconPost } from '@/lib/tecturn/beacon';
 
     let {
         presentationName,
@@ -14,13 +17,38 @@
 
     const EMOJIS = ['👏', '❤️', '😂', '🤯', '🙌', '🔥'] as const;
 
+    // How often to persist the batched tally, and how often to refresh presence
+    // even while idle so the presenter's "watching now" count stays honest.
+    const FLUSH_MS = 5000;
+    const HEARTBEAT_MS = 12000;
+
     const http = useHttp({
         emoji: '',
     });
 
+    // Separate channel for the debounced, persisted tally so it never competes
+    // with the instant broadcast above.
+    const batch = useHttp<{
+        viewerId: string;
+        counts: Record<string, number>;
+        leaving: boolean;
+    }>({
+        viewerId: '',
+        counts: {},
+        leaving: false,
+    });
+
+    const batchUrl = RecordReactionsController.url({ presentation: embedToken });
+
     let floatingReactions = $state<FloatingReactions>();
     let flaring = $state<string | null>(null);
     let lastSentAt = 0;
+
+    let viewerId = '';
+    // Reactions accumulate here between flushes instead of hitting the server
+    // on every tap.
+    const pending = new Map<string, number>();
+    let lastFlushAt = 0;
 
     function sendReaction(emoji: string): void {
         const now = performance.now();
@@ -39,9 +67,60 @@
             }
         }, 400);
 
+        // Instant broadcast so it lands on the big screen right away.
         http.emoji = emoji;
         http.post(SendReactionController.url({ presentation: embedToken }));
+
+        // Tally locally; the batch flush persists it.
+        pending.set(emoji, (pending.get(emoji) ?? 0) + 1);
     }
+
+    function flush(): void {
+        const hasReactions = pending.size > 0;
+        const heartbeatDue = performance.now() - lastFlushAt >= HEARTBEAT_MS;
+
+        if (!hasReactions && !heartbeatDue) {
+            return;
+        }
+
+        const counts = Object.fromEntries(pending);
+        pending.clear();
+        lastFlushAt = performance.now();
+
+        batch.viewerId = viewerId;
+        batch.counts = counts;
+        batch.leaving = false;
+        batch.post(batchUrl);
+    }
+
+    onMount(() => {
+        const key = 'tecturn:viewerId';
+        viewerId = sessionStorage.getItem(key) ?? crypto.randomUUID();
+        sessionStorage.setItem(key, viewerId);
+
+        // Register presence immediately so idle viewers still count.
+        lastFlushAt = 0;
+        flush();
+
+        const interval = setInterval(flush, FLUSH_MS);
+
+        const leave = (): void => {
+            beaconPost(batchUrl, {
+                viewerId,
+                leaving: true,
+                counts: Object.fromEntries(pending),
+            });
+            pending.clear();
+        };
+
+        window.addEventListener('pagehide', leave);
+
+        return () => {
+            clearInterval(interval);
+            window.removeEventListener('pagehide', leave);
+            leave();
+        };
+    });
 </script>
 
 <AppHead title={presentationName} />

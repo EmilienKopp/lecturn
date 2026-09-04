@@ -21,6 +21,16 @@ class PresentPresentationController extends Controller
         return Inertia::render('presentations/Present', [
             'presentation' => $this->presentations->findForPresent($presentation->id),
             'viewerUrl' => route('presentations.viewer', ['presentation' => $presentation->embed_token]),
+            'sessionRoutes' => [
+                'start' => route('presentations.session.start', [
+                    'current_team' => $current_team->slug,
+                    'presentation' => $presentation->id,
+                ]),
+                'close' => route('presentations.session.end', [
+                    'current_team' => $current_team->slug,
+                    'presentation' => $presentation->id,
+                ]),
+            ],
             'translationRoutes' => [
                 'start' => route('presentations.translation-session.start', [
                     'current_team' => $current_team->slug,

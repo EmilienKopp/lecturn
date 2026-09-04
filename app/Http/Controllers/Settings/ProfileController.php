@@ -29,7 +29,11 @@ class ProfileController extends Controller
      */
     public function update(ProfileUpdateRequest $request): RedirectResponse
     {
-        $request->user()->update(['name' => $request->name]);
+        $request->user()->update($request->safe()->only([
+            'name',
+            'social_x_handle',
+            'social_github_handle',
+        ]));
 
         Inertia::flash('toast', ['type' => 'success', 'message' => __('Profile updated.')]);
 

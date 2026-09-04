@@ -1,7 +1,9 @@
 <script lang="ts">
     import Check from 'lucide-svelte/icons/check';
     import Copy from 'lucide-svelte/icons/copy';
+    import Users from 'lucide-svelte/icons/users';
     import type { TalkSettings } from '@/types/generated';
+    import PresentFooter from './PresentFooter.svelte';
 
     let {
         viewerUrl,
@@ -9,6 +11,8 @@
         slideCount = 0,
         currentSlide = 0,
         recentReactions = [],
+        viewerCount = 0,
+        reactionTotal = 0,
         showReactions = $bindable(false),
     }: {
         viewerUrl: string;
@@ -16,6 +20,8 @@
         slideCount?: number;
         currentSlide?: number;
         recentReactions?: { id: number; emoji: string }[];
+        viewerCount?: number;
+        reactionTotal?: number;
         showReactions?: boolean;
     } = $props();
 
@@ -103,6 +109,34 @@
         {/if}
     </section>
 
+    <!-- Live audience -->
+    <section class="rounded-lg bg-zinc-800 p-4">
+        <p
+            class="mb-1 flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wider text-zinc-400"
+        >
+            <Users class="h-3.5 w-3.5" />
+            Watching now
+        </p>
+        <div class="flex items-baseline gap-2">
+            <span
+                class="font-mono text-4xl font-bold tabular-nums text-white"
+                data-test="dock-viewer-count"
+            >
+                {viewerCount}
+            </span>
+            {#if viewerCount > 0}
+                <span class="relative flex h-2 w-2">
+                    <span
+                        class="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-400 opacity-75"
+                    ></span>
+                    <span
+                        class="relative inline-flex h-2 w-2 rounded-full bg-emerald-500"
+                    ></span>
+                </span>
+            {/if}
+        </div>
+    </section>
+
     <!-- QR Code -->
     <section class="rounded-lg bg-white p-3">
         <p class="mb-2 text-center text-xs font-semibold text-zinc-700">
@@ -139,6 +173,9 @@
                 class="text-xs font-semibold uppercase tracking-wider text-zinc-400"
             >
                 Reactions
+                <span class="ml-1 font-mono tabular-nums text-zinc-500"
+                    >{reactionTotal}</span
+                >
             </p>
             <button
                 type="button"
@@ -159,4 +196,11 @@
             </button>
         </div>
     </section>
+
+    <!-- Footer (when relocated into the dock) -->
+    {#if talkSettings.footer.enabled && talkSettings.footer.showInDock}
+        <div class="mt-auto">
+            <PresentFooter footer={talkSettings.footer} variant="dock" />
+        </div>
+    {/if}
 </aside>

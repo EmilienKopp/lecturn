@@ -7,6 +7,7 @@
         Transition,
     } from '@animotion/core';
     import '@animotion/core/theme';
+    import { sanitizeInlineHtml } from '@/lib/tecturn/CodeGeneration/sanitize';
     import {
         codeActionCues,
         compileFlow,
@@ -20,6 +21,7 @@
     import { fontStack } from '@/lib/tecturn/fonts';
     import { FREE_DEFAULTS } from '@/lib/tecturn/free-drag';
     import { layoutDefinitions } from '@/lib/tecturn/layouts';
+    import { scaleFontSize } from '@/lib/tecturn/scaling';
     import type {
         Block,
         FlowGraph,
@@ -81,7 +83,9 @@
 
     const blockStyle = (block: Block): string =>
         [
-            block.style.fontSize ? `font-size: ${block.style.fontSize};` : '',
+            block.style.fontSize
+                ? `font-size: ${scaleFontSize(block.style.fontSize)};`
+                : '',
             block.style.fontWeight
                 ? `font-weight: ${block.style.fontWeight};`
                 : '',
@@ -123,22 +127,13 @@
 {#snippet blockView(block: Block)}
     {#if block.type === 'text'}
         <p style={blockStyle(block)}>
-            {block.content}
+            <!-- eslint-disable-next-line svelte/no-at-html-tags -->
+            {@html sanitizeInlineHtml(block.content)}
         </p>
     {:else if block.type === 'code'}
-        <!-- Animotion's theme ships `.reveal pre { font-size: 0.55em }` and its
-             shiki CSS adds no padding or radius, so an unstyled block renders
-             as tiny raw monospace. The stage is a size container, so 1.4cqw
-             reproduces the editor's proportion (14px on a ~1010px stage) at any
-             screen size; the ! beats the theme rule. -->
         <div
             class="[&_pre]:m-0 [&_pre]:overflow-auto [&_pre]:rounded-lg [&_pre]:bg-[#24292e] [&_pre]:p-4 [&_pre]:text-[1.4cqw]! [&_pre]:leading-relaxed"
         >
-            <!-- autoIndent={false}: Animotion's indent() dedents by the
-                 smallest indent among *indented* lines, ignoring zero-indent
-                 ones, so top-level snippets lose their first indent level on
-                 every render/update. Our code is stored verbatim; render it
-                 verbatim. -->
             <Code
                 bind:this={codeRefs[block.id]}
                 code={block.content}

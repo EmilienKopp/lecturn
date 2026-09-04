@@ -1,11 +1,13 @@
 import type { Block } from '@/types/generated';
 import type { CodePage } from '../../flow-compiler.ts';
 import { fontStack } from '../../fonts.ts';
+import { scaleFontSize } from '../../scaling.ts';
 import type {
     BlockRendererPlugin,
     CodegenPlugin,
     RenderContext,
 } from '../contracts.ts';
+import { sanitizeInlineHtml } from '../sanitize.ts';
 import type { EditorJsBlock, EditorJsOutput } from '../support.ts';
 import {
     INDENT,
@@ -155,7 +157,7 @@ export class BoxRenderer implements BlockRendererPlugin {
             .filter(Boolean)
             .join(' ');
 
-        return `${pad}<div class="box" style="${escapeAttribute(style)}">${escapeHtml(block.content)}</div>`;
+        return `${pad}<div class="box" style="${escapeAttribute(style)}">${sanitizeInlineHtml(block.content)}</div>`;
     }
 }
 
@@ -166,13 +168,15 @@ export class ParagraphRenderer implements BlockRendererPlugin {
     render(block: Block, depth: number): string {
         const pad = INDENT.repeat(depth);
 
-        return `${pad}<p${this.styleAttribute(block)}>${escapeHtml(block.content)}</p>`;
+        return `${pad}<p${this.styleAttribute(block)}>${sanitizeInlineHtml(block.content)}</p>`;
     }
 
     private styleAttribute(block: Block): string {
         const family = fontStack(block.style.fontFamily);
         const parts = [
-            block.style.fontSize ? `font-size: ${block.style.fontSize};` : '',
+            block.style.fontSize
+                ? `font-size: ${scaleFontSize(block.style.fontSize)};`
+                : '',
             block.style.fontWeight
                 ? `font-weight: ${block.style.fontWeight};`
                 : '',

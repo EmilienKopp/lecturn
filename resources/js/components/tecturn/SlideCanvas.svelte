@@ -1,6 +1,7 @@
 <script lang="ts">
     import FreeCanvas from '@/components/tecturn/FreeCanvas.svelte';
     import GridCanvas from '@/components/tecturn/GridCanvas.svelte';
+    import InlineFormatToolbar from '@/components/tecturn/InlineFormatToolbar.svelte';
     import RichTextEditor from '@/components/tecturn/RichTextEditor.svelte';
     import SlotRenderer from '@/components/tecturn/SlotRenderer.svelte';
     import type { EditorState } from '@/lib/tecturn/editor-state.svelte';
@@ -42,7 +43,7 @@
     onclick={() => (editor.selectedBlockId = null)}
 >
     <div
-        class="stage-canvas aspect-video w-full max-w-5xl rounded-md {isRichText
+        class="stage-canvas aspect-video w-full max-w-5xl rounded-md [container-type:inline-size] {isRichText
             ? 'overflow-visible'
             : ''}"
         style="background: {stageBackground}; color: #1a1a1a"
@@ -82,3 +83,5 @@
         {/if}
     </div>
 </div>
+
+<InlineFormatToolbar />

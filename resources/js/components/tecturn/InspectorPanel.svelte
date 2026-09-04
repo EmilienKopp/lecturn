@@ -242,6 +242,10 @@
         {/if}
 
         {#if block.type === 'text' || block.type === 'box'}
+            <p class="text-xs text-muted-foreground">
+                Box defaults. Select text in the box to style a span
+                individually.
+            </p>
             <div class="space-y-1">
                 <Label for="block-font-size" class="text-xs">Font size</Label>
                 <select

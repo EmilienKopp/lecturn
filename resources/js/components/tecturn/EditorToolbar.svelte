@@ -6,6 +6,7 @@
     import Heart from 'lucide-svelte/icons/heart';
     import Languages from 'lucide-svelte/icons/languages';
     import LayoutPanelLeft from 'lucide-svelte/icons/layout-panel-left';
+    import PanelBottom from 'lucide-svelte/icons/panel-bottom';
     import PanelRight from 'lucide-svelte/icons/panel-right';
     import Play from 'lucide-svelte/icons/play';
     import QrCode from 'lucide-svelte/icons/qr-code';
@@ -26,9 +27,10 @@
     import { ms } from '@/lib/support/time';
     import type { EditorState } from '@/lib/tecturn/editor-state.svelte';
     import { present, update } from '@/routes/presentations';
-    import type { TalkSettings } from '@/types/generated';
+    import type { FooterSettings, TalkSettings } from '@/types/generated';
     import Checkbox from '../ui/checkbox/Checkbox.svelte';
     import Label from '../ui/label/Label.svelte';
+    import FooterSettingsModal from './FooterSettingsModal.svelte';
 
     let {
         editor,
@@ -57,6 +59,8 @@
     let showTranslation = $state(talkSettings.showTranslation);
     let savingTalkSettings = $state(false);
     let autoSave = $state(talkSettings.autoSave ?? false);
+    let footer = $state<FooterSettings>(talkSettings.footer);
+    let footerModalOpen = $state(false);
     let saving = $state(promise());
     let confirmModal: Confirm;
 
@@ -87,6 +91,7 @@
                     showDock,
                     showTranslation,
                     autoSave,
+                    footer,
                 },
             },
             {
@@ -121,6 +126,14 @@
         persistTalkSettings(
             () => (autoSave = !autoSave),
             () => (autoSave = !autoSave),
+        );
+    };
+
+    const saveFooter = (next: FooterSettings) => {
+        const previous = footer;
+        persistTalkSettings(
+            () => (footer = next),
+            () => (footer = previous),
         );
     };
 
@@ -352,6 +365,23 @@
                     toggleTranslation,
                     'editor-translation-toggle',
                 )}
+                <button
+                    type="button"
+                    role="menuitem"
+                    class="flex w-full cursor-pointer select-none items-center gap-2 rounded-sm px-2 py-1.5 text-sm outline-none hover:bg-accent hover:text-accent-foreground"
+                    onclick={() => (footerModalOpen = true)}
+                    data-test="editor-footer-menu-item"
+                >
+                    <PanelBottom class="h-4 w-4" />
+                    Footer…
+                    <span
+                        class="ml-auto text-xs {footer.enabled
+                            ? 'font-medium text-primary'
+                            : 'text-muted-foreground'}"
+                    >
+                        {footer.enabled ? 'On' : 'Off'}
+                    </span>
+                </button>
             </DropdownMenuContent>
         </DropdownMenu>
 
@@ -441,3 +471,5 @@
 </div>
 
 <Confirm bind:this={confirmModal} />
+
+<FooterSettingsModal {footer} bind:open={footerModalOpen} onSave={saveFooter} />

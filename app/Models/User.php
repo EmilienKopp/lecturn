@@ -21,6 +21,8 @@ use Illuminate\Support\Carbon;
  * @property string $workos_id
  * @property string|null $remember_token
  * @property string $avatar
+ * @property string|null $social_x_handle
+ * @property string|null $social_github_handle
  * @property int|null $current_team_id
  * @property Carbon|null $created_at
  * @property Carbon|null $updated_at
@@ -29,7 +31,7 @@ use Illuminate\Support\Carbon;
  * @property-read Collection<int, Membership> $teamMemberships
  * @property-read Collection<int, Team> $teams
  */
-#[Fillable(['name', 'email', 'email_verified_at', 'workos_id', 'avatar', 'current_team_id'])]
+#[Fillable(['name', 'email', 'email_verified_at', 'workos_id', 'avatar', 'social_x_handle', 'social_github_handle', 'current_team_id'])]
 #[Hidden(['workos_id', 'remember_token'])]
 class User extends Authenticatable
 {
