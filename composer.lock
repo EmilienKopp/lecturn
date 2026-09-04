@@ -4,7 +4,7 @@
         "Read more about it at https://getcomposer.org/doc/01-basic-usage.md#installing-dependencies",
         "This file is @generated automatically"
     ],
-    "content-hash": "202a520b03794edcd11ed75e8a0c0760",
+    "content-hash": "7f5cca8d38e27a881d467ad8cf303fae",
     "packages": [
         {
             "name": "aws/aws-crt-php",
@@ -6710,6 +6710,70 @@
                 "source": "https://github.com/EmilienKopp/inertia-split/tree/v0.1.4"
             },
             "time": "2026-07-15T00:39:52+00:00"
+        },
+        {
+            "name": "splitstack/laravel-conveyor",
+            "version": "v0.1.0",
+            "source": {
+                "type": "git",
+                "url": "https://github.com/EmilienKopp/laravel-conveyor.git",
+                "reference": "a0e469039d1a12c0fec556a68fba6a30d21a4d88"
+            },
+            "dist": {
+                "type": "zip",
+                "url": "https://api.github.com/repos/EmilienKopp/laravel-conveyor/zipball/a0e469039d1a12c0fec556a68fba6a30d21a4d88",
+                "reference": "a0e469039d1a12c0fec556a68fba6a30d21a4d88",
+                "shasum": ""
+            },
+            "require": {
+                "illuminate/bus": "^10.0|^11.0|^12.0|^13.0",
+                "illuminate/contracts": "^10.0|^11.0|^12.0|^13.0",
+                "illuminate/database": "^10.0|^11.0|^12.0|^13.0",
+                "illuminate/events": "^10.0|^11.0|^12.0|^13.0",
+                "illuminate/pipeline": "^10.0|^11.0|^12.0|^13.0",
+                "illuminate/queue": "^10.0|^11.0|^12.0|^13.0",
+                "illuminate/support": "^10.0|^11.0|^12.0|^13.0",
+                "php": "^8.4"
+            },
+            "require-dev": {
+                "laravel/pint": "^1.30",
+                "orchestra/testbench": "^11.0",
+                "pestphp/pest": "^5.0",
+                "pestphp/pest-plugin-drift": "^5.0",
+                "pestphp/pest-plugin-phpstan": "^5.0",
+                "pestphp/pest-plugin-type-coverage": "^5.0",
+                "phpstan/phpstan": "^2.2",
+                "phpunit/phpunit": "^13.2",
+                "rector/rector": "^2.5"
+            },
+            "type": "library",
+            "extra": {
+                "laravel": {
+                    "providers": [
+                        "Splitstack\\Conveyor\\ConveyorServiceProvider"
+                    ]
+                }
+            },
+            "autoload": {
+                "psr-4": {
+                    "Splitstack\\Conveyor\\": "src/"
+                }
+            },
+            "notification-url": "https://packagist.org/downloads/",
+            "license": [
+                "MIT"
+            ],
+            "authors": [
+                {
+                    "name": "EmilienKopp",
+                    "email": "emilien.kopp@gmail.com"
+                }
+            ],
+            "support": {
+                "issues": "https://github.com/EmilienKopp/laravel-conveyor/issues",
+                "source": "https://github.com/EmilienKopp/laravel-conveyor/tree/v0.1.0"
+            },
+            "time": "2026-08-09T04:48:42+00:00"
         },
         {
             "name": "splitstack/laravel-enum-friendly",

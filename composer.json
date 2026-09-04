@@ -22,6 +22,7 @@
         "spatie/laravel-medialibrary": "^11.23",
         "spatie/laravel-navigation": "^1.3",
         "splitstack/inertia-split": "^0.1.4",
+        "splitstack/laravel-conveyor": "^0.1.0",
         "splitstack/laravel-enum-friendly": "^2.2",
         "splitstack/laravel-rome": "^0.1.0",
         "splitstack/laravel-typewriter": "^0.1.0"

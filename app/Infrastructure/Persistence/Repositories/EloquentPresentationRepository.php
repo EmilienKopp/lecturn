@@ -7,6 +7,8 @@ namespace App\Infrastructure\Persistence\Repositories;
 use App\Domain\Presentation\Contracts\PresentationRepository;
 use App\Domain\Presentation\Entities\PresentationEntity;
 use App\Models\PresentationModel;
+use Illuminate\Support\Facades\Http;
+use RuntimeException;
 
 class EloquentPresentationRepository implements PresentationRepository
 {
@@ -68,5 +70,45 @@ class EloquentPresentationRepository implements PresentationRepository
             ->toMediaCollection(PresentationModel::IMAGES_COLLECTION);
 
         return $media->getFullUrl();
+    }
+
+    public function storeImageFromUrl(int $id, string $url): string
+    {
+        $model = PresentationModel::findOrFail($id);
+
+        $response = Http::connectTimeout(10)->timeout(20)->get($url);
+
+        if ($response->failed()) {
+            throw new RuntimeException("Failed to download image from {$url} (status {$response->status()}).");
+        }
+
+        $temporaryPath = tempnam(sys_get_temp_dir(), 'lecturn-import-');
+        file_put_contents($temporaryPath, $response->body());
+
+        try {
+            // The collection's accepted mime types reject anything that isn't an image.
+            $media = $model->addMedia($temporaryPath)
+                ->usingFileName($this->fileNameForUrl($url))
+                ->toMediaCollection(PresentationModel::IMAGES_COLLECTION);
+        } finally {
+            if (is_file($temporaryPath)) {
+                unlink($temporaryPath);
+            }
+        }
+
+        return $media->getFullUrl();
+    }
+
+    public function clearImages(int $id): void
+    {
+        PresentationModel::findOrFail($id)
+            ->clearMediaCollection(PresentationModel::IMAGES_COLLECTION);
+    }
+
+    private function fileNameForUrl(string $url): string
+    {
+        $name = urldecode(basename((string) parse_url($url, PHP_URL_PATH)));
+
+        return $name !== '' ? $name : 'image';
     }
 }
